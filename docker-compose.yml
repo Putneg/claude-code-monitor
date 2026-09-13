@@ -1,0 +1,37 @@
+name: claude-code-monitor
+services:
+  claude-code-monitor:
+    build: .
+    image: claude-code-monitor:local
+    container_name: claude-code-monitor
+    restart: unless-stopped
+    stop_grace_period: 30s
+    # tini runs as PID 1: it forwards SIGTERM to node and reaps zombie processes.
+    init: true
+    # Hardening: the root filesystem is read-only; the app writes only to /data (the volume) and /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - '127.0.0.1:${MONITOR_PORT:-8739}:8739'
+    # TZ, SCAN_INTERVAL_SEC, LOG_LEVEL and the other settings reach the container only from .env, never from the host
+    # shell (a host TZ such as ":/etc/localtime" is not an IANA zone). Without a TZ in .env the image's UTC applies.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Container paths and port are fixed; values in .env cannot override them.
+      CLAUDE_PROJECTS_DIRS: /claude/projects
+      DB_PATH: /data/monitor.db
+      HOST: 0.0.0.0
+      PORT: '8739'
+    volumes:
+      - ${CLAUDE_HOME:?Set CLAUDE_HOME in .env (see .env.example)}/projects:/claude/projects:ro
+      - monitor-data:/data
+
+volumes:
+  monitor-data:

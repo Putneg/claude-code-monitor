@@ -1,0 +1,15 @@
+node_modules
+dist
+data
+coverage
+.vitest
+.git
+.superpowers
+docs
+tests
+*.md
+!THIRD_PARTY_NOTICES.md
+.env
+.e2e-data
+playwright-report
+test-results

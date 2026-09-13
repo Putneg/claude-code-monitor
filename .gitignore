@@ -1,0 +1,32 @@
+# local working notes (never published)
+.superpowers/
+.claude/
+
+# dependencies & build output
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# local runtime data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# env
+.env
+.env.*
+!.env.example
+
+# vitest 5 report output
+.vitest/
+
+# e2e server data (fixture transcripts + SQLite)
+.e2e-data/
+
+# editors and logs
+/.idea/
+.vscode/
+*.log

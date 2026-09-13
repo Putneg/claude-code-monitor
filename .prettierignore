@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+dist
+coverage
+.superpowers
+.claude
+.e2e-data
+test-results
+playwright-report
+data
+src/server/pricing/snapshot.ts
+docs/screenshot.png

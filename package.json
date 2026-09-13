@@ -1,0 +1,81 @@
+{
+  "name": "claude-code-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Always-on monitor for Claude Code token usage and API-equivalent cost",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "claude",
+    "token-usage",
+    "cost-tracking",
+    "dashboard",
+    "self-hosted",
+    "sqlite",
+    "docker"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev": "tsx watch src/server/main.ts",
+    "dev:web": "vite",
+    "build": "pnpm build:server && pnpm build:web",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:web": "vite build",
+    "start": "node dist/server/main.js",
+    "typecheck": "tsc -p tsconfig.json && svelte-check --tsconfig ./tsconfig.web.json --fail-on-warnings",
+    "lint": "eslint . --max-warnings 0 && prettier --check .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:coverage": "vitest run --project unit --coverage",
+    "test:acceptance": "vitest run --project acceptance",
+    "test:e2e": "pnpm build:web && playwright test",
+    "update-prices": "tsx scripts/update-prices.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.1",
+    "better-sqlite3": "13.0.3",
+    "hono": "4.13.7",
+    "pino": "10.3.1",
+    "zod": "4.6.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "@playwright/test": "1.63.0",
+    "@sveltejs/vite-plugin-svelte": "7.3.0",
+    "@tsconfig/svelte": "5.0.8",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "22.20.2",
+    "@vitest/coverage-v8": "5.0.0",
+    "echarts": "6.1.0",
+    "eslint": "10.10.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-svelte": "3.23.0",
+    "globals": "17.12.0",
+    "pino-pretty": "13.1.3",
+    "prettier": "3.9.6",
+    "prettier-plugin-svelte": "4.1.1",
+    "svelte": "5.57.0",
+    "svelte-check": "4.7.6",
+    "tsx": "4.23.13",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0",
+    "vite": "8.3.0",
+    "vitest": "5.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  }
+}
