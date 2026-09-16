@@ -1,4 +1,4 @@
-import type { Day, OverviewResponse, OverviewTotals } from '../../shared/api.js';
+import type { ClientBreakdown, Day, OverviewResponse, OverviewTotals } from '../../shared/api.js';
 import { bucketLabel, formatPercent, formatTokens, formatUsd, formatUsdExact, plural, shortDay } from './format.js';
 import { peakOf } from './series.js';
 import type { Unit } from './view-state.js';
@@ -39,6 +39,13 @@ function webSearchRows(totals: OverviewTotals): HeroRow[] {
     : [];
 }
 
+/** Spend (or tokens) per client, only when the range has more than one client. */
+function clientRows(overview: OverviewResponse, unit: Unit): HeroRow[] {
+  if (overview.byClient.length < 2) return [];
+  const amount = (item: ClientBreakdown): string => (unit === 'usd' ? formatUsd(item.cost) : formatTokens(item.tokensTotal));
+  return [row('clients', '', overview.byClient.map((item) => `${item.label} ${amount(item)}`).join(' · '))];
+}
+
 /** SpendHero content: the caption, the big number and the rows under it. The unit switches the big number, average and peak. */
 export function heroView(overview: OverviewResponse, unit: Unit, rangeText: string, firstDay: Day | null): HeroView {
   const { totals, range } = overview;
@@ -55,6 +62,7 @@ export function heroView(overview: OverviewResponse, unit: Unit, rangeText: stri
       comparisonRow(totals.prevPeriodCost, money, range.days, firstDay),
       unit === 'usd' ? row('tokens', formatTokens(totals.tokensTotal)) : row('cost', formatUsdExact(money)),
       row('sessions', String(totals.sessions), ` in ${plural(totals.projects, 'project')}`),
+      ...clientRows(overview, unit),
       row('subagents', formatPercent(share(totals.subagentCost, money), 0), ' of spend'),
       row('advisor', formatPercent(share(totals.advisorCost, money), 0), ` · ${formatUsd(totals.advisorCost)}`),
       ...webSearchRows(totals),

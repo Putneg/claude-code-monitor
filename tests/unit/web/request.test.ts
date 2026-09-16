@@ -21,4 +21,10 @@ describe('dataRequest', () => {
     expect(dataRequest({ ...DEFAULT_VIEW, unit: 'tok', cumulative: false }, range).key).toBe(base.key);
     expect(dataRequest({ ...DEFAULT_VIEW, sort: 'recent' }, range).key).not.toBe(base.key);
   });
+
+  it('sends the client selection to both queries', () => {
+    const request = dataRequest({ ...DEFAULT_VIEW, clients: ['codex'], stack: 'client' }, range);
+    expect(request.overview).toBe('from=2026-03-01&to=2026-03-14&clients=codex&stack=client');
+    expect(request.sessions).toBe('from=2026-03-01&to=2026-03-14&clients=codex&sort=cost&limit=50');
+  });
 });

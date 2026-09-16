@@ -107,15 +107,16 @@ describe('migrate', () => {
     expect(names).toEqual(expect.arrayContaining(['file_state', 'meta', 'model_price_map', 'prices', 'sessions', 'usage', 'usage_costed']));
     const version = db.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).get() as { value: string };
     expect(Number(version.value)).toBe(LATEST_SCHEMA_VERSION);
-    expect(LATEST_SCHEMA_VERSION).toBe(2);
+    expect(LATEST_SCHEMA_VERSION).toBe(3);
   });
 
-  it('creates schema v2 on a fresh database', () => {
+  it('creates the latest schema on a fresh database', () => {
     const db = freshDb();
     expect(primaryKey(db, 'usage')).toEqual(['message_id', 'kind', 'seq']);
-    expect(columnNames(db, 'usage')).toEqual(expect.arrayContaining(['request_id', 'web_search_requests', 'web_fetch_requests']));
+    expect(columnNames(db, 'usage')).toEqual(expect.arrayContaining(['request_id', 'web_search_requests', 'web_fetch_requests', 'client']));
     expect(columnNames(db, 'sessions')).toEqual(['session_id', 'project_path', 'project_id', 'project_source', 'project_ts', 'title']);
-    expect(columnNames(db, 'file_state')).toEqual(['path', 'size', 'mtime_ms', 'read_offset', 'fingerprint']);
+    expect(columnNames(db, 'file_state')).toEqual(['path', 'size', 'mtime_ms', 'read_offset', 'fingerprint', 'parser_state']);
+    expect(primaryKey(db, 'codex_rate_limits')).toEqual(['limit_id']);
     expect(columnNames(db, 'usage_costed')).toEqual(expect.arrayContaining(['cost_web_search', 'cost']));
     const indexes = db.prepare<[], { name: string }>(`SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'usage'`).all();
     expect(indexes.map((index) => index.name)).toContain('usage_day_model');
@@ -242,7 +243,7 @@ describe('migration from v1 to v2', () => {
     // An advisor row of the same message has its own key and is kept.
     insertV1Usage(db, { messageId: 'm1', requestId: 'req_1', kind: 'advisor', seq: 1, output: 7 });
 
-    expect(migrate(db)).toBe(2);
+    expect(migrate(db, 2)).toBe(2);
     const rows = db
       .prepare<[], CollapsedRow>(
         'SELECT message_id, request_id, kind, session_id, is_sidechain, output FROM usage ORDER BY message_id, kind',
@@ -266,7 +267,7 @@ describe('migration from v1 to v2', () => {
        VALUES ('s1', '/home/dev/alpha', 'abc1234567', 'main', 5, 'Alpha work', 1, 9)`,
     ).run();
     db.prepare(`INSERT INTO file_state (path, size, mtime_ms, read_offset) VALUES ('/p/s1.jsonl', 10, 1.5, 10)`).run();
-    migrate(db);
+    migrate(db, 2);
     expect(db.prepare('SELECT * FROM sessions').all()).toEqual([
       {
         session_id: 's1',
@@ -329,9 +330,66 @@ describe('migration from v1 to v2', () => {
                @input, @output, @cache_read, @cache_write_5m, @cache_write_1h)`,
     ).run(v1Row);
 
-    expect(migrate(db)).toBe(2);
+    expect(migrate(db, 2)).toBe(2);
     expect(db.prepare<[], V2UsageColumns>('SELECT * FROM usage').all()).toEqual([
       { ...v1Row, web_search_requests: 0, web_fetch_requests: 0 },
     ]);
+  });
+});
+
+function v2Db(): Db {
+  const db = openDatabase(':memory:');
+  expect(migrate(db, 2)).toBe(2);
+  return db;
+}
+
+describe('migration from v2 to v3', () => {
+  it('marks existing usage rows as Claude Code rows and shows the client through usage_costed', () => {
+    const db = v2Db();
+    insertV1Usage(db, { messageId: 'm1', requestId: 'req_1', output: 5 });
+    expect(migrate(db)).toBe(3);
+    expect(db.prepare('SELECT message_id, client, output FROM usage').all()).toEqual([{ message_id: 'm1', client: 'claude', output: 5 }]);
+    expect(db.prepare('SELECT message_id, client, cost FROM usage_costed').all()).toEqual([
+      { message_id: 'm1', client: 'claude', cost: 0 },
+    ]);
+  });
+
+  it('refuses an unknown client', () => {
+    const db = freshDb();
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO usage (message_id, kind, session_id, is_sidechain, model, ts, local_day, client)
+           VALUES ('m1', 'primary', 's1', 0, 'gpt-5.6-sol', 0, '2026-09-10', 'other')`,
+        )
+        .run(),
+    ).toThrow(/CHECK constraint failed/);
+  });
+
+  it('gives existing file states no parser state', () => {
+    const db = v2Db();
+    db.prepare(`INSERT INTO file_state (path, size, mtime_ms, read_offset, fingerprint) VALUES ('/p/a.jsonl', 10, 1.5, 10, NULL)`).run();
+    migrate(db);
+    expect(db.prepare('SELECT path, parser_state FROM file_state').all()).toEqual([{ path: '/p/a.jsonl', parser_state: null }]);
+  });
+
+  it('creates an empty rate-limit table', () => {
+    const db = v2Db();
+    migrate(db);
+    expect(columnNames(db, 'codex_rate_limits')).toEqual([
+      'limit_id',
+      'plan_type',
+      'primary_used_percent',
+      'primary_window_minutes',
+      'primary_resets_at',
+      'secondary_used_percent',
+      'secondary_window_minutes',
+      'secondary_resets_at',
+      'credits_has',
+      'credits_unlimited',
+      'credits_balance',
+      'observed_at',
+    ]);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM codex_rate_limits').get()).toEqual({ n: 0 });
   });
 });

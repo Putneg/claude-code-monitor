@@ -2,10 +2,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { queryFilters } from '../../src/server/db/queries/filters.js';
 import { queryTotals } from '../../src/server/db/queries/totals.js';
 import { runIngestCycle, type IngestDeps } from '../../src/server/ingest/ingestor.js';
+import { claudeRoot, codexRoot } from '../../src/server/ingest/sources.js';
 import { createLogger } from '../../src/server/logger.js';
 import { createPricingService } from '../../src/server/pricing/refresher.js';
+import { PRICE_SNAPSHOT } from '../../src/server/pricing/snapshot.js';
 import { StatusTracker } from '../../src/server/status.js';
 import { createLocalDay } from '../../src/server/time.js';
+import { sessionMetaLine, turnContextLine, usageRecordLine } from '../helpers/codex-records.js';
 import { createTestDb } from '../helpers/db.js';
 import { assistantLine } from '../helpers/records.js';
 import { range, TEST_PRICES } from '../helpers/seed.js';
@@ -21,7 +24,7 @@ function setup() {
   const deps: IngestDeps = {
     db,
     repos,
-    roots: [tree.root],
+    roots: [claudeRoot(tree.root)],
     toLocalDay: createLocalDay('UTC'),
     status: new StatusTracker(() => Date.parse('2026-09-11T00:00:00Z')),
     logger: createLogger('silent'),
@@ -98,5 +101,48 @@ describe('IngestDeps.onFileCommitted', () => {
     expect(queryFilters(db, repos).models).toEqual([expect.objectContaining({ id: 'claude-opus-5', priced: true })]);
     // 100 output x $25/Mtok + 1,000 cache read x $0.50/Mtok
     expect(queryTotals(db, range('2026-09-10', '2026-09-10')).cost.total).toBeCloseTo(0.003, 12);
+  });
+});
+
+describe('Codex pricing', () => {
+  it('prices Codex models from the embedded snapshot and leaves the auto-review model unpriced', async () => {
+    tree = createTree();
+    const { db, repos } = createTestDb();
+    const deps: IngestDeps = {
+      db,
+      repos,
+      roots: [codexRoot(tree.root)],
+      toLocalDay: createLocalDay('UTC'),
+      status: new StatusTracker(() => Date.parse('2026-09-11T00:00:00Z')),
+      logger: createLogger('silent'),
+    };
+    const pricing = createPricingService({
+      prices: repos.prices,
+      fetchPayload: async () => ({}),
+      snapshot: PRICE_SNAPSHOT,
+      logger: createLogger('silent'),
+      now: () => Date.parse('2026-09-11T00:00:00Z'),
+      refreshMs: 86_400_000,
+      retryMs: 3_600_000,
+    });
+    pricing.ensureLoaded();
+    tree.write('2026/09/10/rollout-a.jsonl', [
+      sessionMetaLine({ id: 'cx-a' }),
+      turnContextLine({ turnId: 't1', model: 'gpt-5.6-sol' }),
+      usageRecordLine({ threadId: 'cx-a', turnId: 't1', responseId: 'resp_1', input: 1_000, cached: 400, output: 100 }),
+      turnContextLine({ turnId: 't2', model: 'codex-auto-review' }),
+      usageRecordLine({ threadId: 'cx-a', turnId: 't2', responseId: 'resp_2', input: 500, output: 10 }),
+    ]);
+    await runIngestCycle({ ...deps, onFileCommitted: (models) => pricing.ensureMapped(models) });
+    expect(queryFilters(db, repos).models).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'gpt-5.6-sol', priced: true }),
+        expect.objectContaining({ id: 'codex-auto-review', priced: false }),
+      ]),
+    );
+    // Uncached input is 1,000 - 400; the auto-review row is unpriced and adds $0.
+    const p = PRICE_SNAPSHOT.prices['gpt-5.6-sol']!;
+    const expectedCost = 600 * p.input + 400 * p.cacheRead + 100 * p.output;
+    expect(queryTotals(db, range('2026-09-10', '2026-09-10')).cost.total).toBeCloseTo(expectedCost, 12);
   });
 });

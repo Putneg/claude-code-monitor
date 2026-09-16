@@ -1,4 +1,14 @@
+/** The coding agents whose usage the monitor counts, in display order. */
+export const CLIENTS = ['claude', 'codex'] as const;
+export type Client = (typeof CLIENTS)[number];
+
+/** Narrows an untrusted string (a URL parameter or a database value) to a known client. */
+export const isClient = (value: string): value is Client => CLIENTS.some((client) => client === value);
+
 export const MODEL_COLORS: Readonly<Record<string, string>> = {
+  'gpt-6-astra': '#FF79C6',
+  'gpt-5.6-sol': '#2BD9A5',
+  'codex-auto-review': '#B8BB26',
   'opus-5': '#FFB000',
   'fable-5': '#5FD7D7',
   'fable-5.1': '#7AA2F7',
@@ -26,10 +36,11 @@ export const TOKEN_TYPE_META: Readonly<Record<TokenTypeKey, { label: string; col
   input: { label: 'input', color: '#C792EA' },
 };
 
-/** claude-fable-5-1 -> fable-5.1, claude-haiku-4-5-20251001 -> haiku-4.5 */
+/** claude-fable-5-1 -> fable-5.1, claude-haiku-4-5-20251001 -> haiku-4.5; other ids are shown as they are. */
 export function modelLabel(modelId: string): string {
+  if (!modelId.startsWith('claude-')) return modelId;
   return modelId
-    .replace(/^claude-/, '')
+    .slice('claude-'.length)
     .replace(/-\d{8}$/, '')
     .replace(/(\d+)-(\d{1,2})$/, '$1.$2');
 }
@@ -57,4 +68,19 @@ export function projectLabel(path: string): string {
   const segments = path.split(/[\\/]+/).filter((segment) => segment.length > 0);
   const label = segments.slice(-2).join('/');
   return label.length > 0 ? label : path;
+}
+
+export interface ClientMeta {
+  readonly label: string;
+  readonly color: string;
+}
+
+export const CLIENT_META: Readonly<Record<Client, ClientMeta>> = {
+  claude: { label: 'claude code', color: '#FFB000' },
+  codex: { label: 'codex', color: '#10A37F' },
+};
+
+/** Label and color for a client id read from the database; an unknown id keeps its name and gets the 'other' color. */
+export function clientMeta(id: string): ClientMeta {
+  return isClient(id) ? CLIENT_META[id] : { label: id, color: OTHER_COLOR };
 }

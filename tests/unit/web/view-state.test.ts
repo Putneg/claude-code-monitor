@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clientChoice,
   DEFAULT_VIEW,
+  effectiveView,
   isChecked,
   parseViewState,
   serializeViewState,
   toggleModel,
   toggleProject,
+  visibleStacks,
   withCustomRange,
   withPreset,
   withSettings,
@@ -19,13 +22,16 @@ describe('parseViewState', () => {
 
   it('reads every field', () => {
     expect(
-      parseViewState('?from=2026-03-01&to=2026-03-14&models=a,b&projects=p1&unit=tok&stack=type&bucket=hour&cum=0&sort=recent'),
+      parseViewState(
+        '?from=2026-03-01&to=2026-03-14&models=a,b&projects=p1&clients=codex&unit=tok&stack=type&bucket=hour&cum=0&sort=recent',
+      ),
     ).toEqual({
       range: null,
       from: '2026-03-01',
       to: '2026-03-14',
       models: ['a', 'b'],
       projects: ['p1'],
+      clients: ['codex'],
       unit: 'tok',
       stack: 'type',
       bucket: 'hour',
@@ -75,6 +81,7 @@ describe('serializeViewState', () => {
       to: '2026-03-14',
       models: ['claude-opus-5', 'claude-sonnet-5'],
       projects: ['p 1'],
+      clients: [],
       unit: 'tok',
       stack: 'project',
       bucket: 'day',
@@ -143,5 +150,58 @@ describe('model and project selection', () => {
   it('toggles projects, where empty means all', () => {
     expect(toggleProject([], 'p1')).toEqual(['p1']);
     expect(toggleProject(['p1', 'p2'], 'p1')).toEqual(['p2']);
+  });
+});
+
+describe('clients in the URL', () => {
+  it('keeps known clients only, and reads a list of every client as all', () => {
+    expect(parseViewState('?clients=codex,other').clients).toEqual(['codex']);
+    expect(parseViewState('?clients=codex,claude').clients).toEqual([]);
+    expect(parseViewState('?clients=').clients).toEqual([]);
+  });
+
+  it('reads the client stack', () => {
+    expect(parseViewState('?stack=client').stack).toBe('client');
+  });
+
+  it('writes the selection after the projects', () => {
+    expect(serializeViewState({ ...DEFAULT_VIEW, projects: ['p'], clients: ['codex'] })).toBe('projects=p&clients=codex');
+    expect(serializeViewState({ ...DEFAULT_VIEW, clients: [] })).toBe('');
+  });
+});
+
+describe('clientChoice', () => {
+  it('is the single selected client, or all', () => {
+    expect(clientChoice([])).toBe('all');
+    expect(clientChoice(['codex'])).toBe('codex');
+    expect(clientChoice(['claude', 'codex'])).toBe('all');
+  });
+});
+
+describe('effectiveView', () => {
+  const both = ['claude', 'codex'] as const;
+
+  it('keeps the view when two clients have data', () => {
+    const view = { ...DEFAULT_VIEW, clients: ['codex'] as const, stack: 'client' as const };
+    expect(effectiveView(view, both)).toBe(view);
+  });
+
+  it('sets the client selection and stack aside when only one client has data', () => {
+    const view = { ...DEFAULT_VIEW, clients: ['codex'] as const, stack: 'client' as const };
+    expect(effectiveView(view, ['claude'])).toEqual({ ...view, clients: [], stack: 'model' });
+    expect(effectiveView(DEFAULT_VIEW, [])).toBe(DEFAULT_VIEW);
+  });
+
+  it('keeps a selected client that has data, and a non-client stack with one client', () => {
+    const view = { ...DEFAULT_VIEW, clients: ['codex'] as const };
+    expect(effectiveView(view, ['claude', 'codex']).clients).toEqual(['codex']);
+    expect(effectiveView({ ...view, stack: 'type' }, ['claude']).stack).toBe('type');
+  });
+});
+
+describe('visibleStacks', () => {
+  it('offers the client stack only with two clients', () => {
+    expect(visibleStacks(['claude'])).toEqual(['model', 'type', 'project']);
+    expect(visibleStacks(['claude', 'codex'])).toEqual(['model', 'type', 'project', 'client']);
   });
 });

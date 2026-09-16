@@ -4,7 +4,17 @@ import { ApiRequestError, createApiClient, describeError, REQUEST_TIMEOUT_MS, ty
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
-const STATUS_BODY = { now: 'n', today: '2026-09-11', tz: 'UTC', sync: {}, backfill: {}, sources: [], pricing: {}, data: {} };
+const STATUS_BODY = {
+  now: 'n',
+  today: '2026-09-11',
+  tz: 'UTC',
+  sync: {},
+  backfill: {},
+  sources: [],
+  pricing: {},
+  data: {},
+  codexLimits: [],
+};
 const ACCEPT = { accept: 'application/json' };
 
 /** Like fetch against a server that never answers: settles only when the signal aborts, with its reason. */
@@ -112,6 +122,16 @@ describe('createApiClient', () => {
       throw abort;
     });
     await expect(aborted.status()).rejects.toBe(abort);
+  });
+
+  it('requires the client and Codex fields', async () => {
+    const oldStatus = { now: 'n', today: '2026-09-11', tz: 'UTC', sync: {}, backfill: {}, sources: [], pricing: {}, data: {} };
+    await expect(createApiClient(async () => json(oldStatus)).status()).rejects.toMatchObject({ code: 'bad_response' });
+    await expect(createApiClient(async () => json({ models: [], projects: [], bounds: {} })).filters()).rejects.toMatchObject({
+      code: 'bad_response',
+    });
+    const overview = { range: {}, totals: {}, series: {}, byModel: [], byProject: [] };
+    await expect(createApiClient(async () => json(overview)).overview('x=1')).rejects.toMatchObject({ code: 'bad_response' });
   });
 });
 

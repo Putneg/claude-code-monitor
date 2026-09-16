@@ -1,4 +1,4 @@
-import type { OverviewResponse, StatusResponse } from '../../shared/api.js';
+import type { OverviewResponse, SourceStatus, StatusResponse } from '../../shared/api.js';
 import { formatBytes, formatClock, formatStamp, plural } from './format.js';
 
 export const PROGRESS_CELLS = 5;
@@ -55,11 +55,22 @@ export function pendingIndicator(apiDown: boolean): StatusIndicator {
   return apiDown ? OFFLINE : { kind: 'connecting', text: 'connecting…', progress: null };
 }
 
+/** Sources worth listing: every required one, and optional ones that exist. */
+export function visibleSources(sources: readonly SourceStatus[]): SourceStatus[] {
+  return sources.filter((source) => source.required || source.present);
+}
+
+const requiredSourceMissing = (status: StatusResponse): boolean => status.sources.some((source) => source.required && !source.ok);
+
+const optionalSourceBroken = (status: StatusResponse): boolean =>
+  status.sources.some((source) => !source.required && source.present && !source.ok);
+
 function warnings(status: StatusResponse): string[] {
   const unpriced = status.pricing.unpricedModels.length;
   const { skippedLines, droppedIterations, usageMismatches } = status.sync;
   return [
-    ...(status.sources.some((source) => !source.ok) ? ['⚠ source missing'] : []),
+    ...(requiredSourceMissing(status) ? ['⚠ source missing'] : []),
+    ...(optionalSourceBroken(status) ? ['⚠ codex source unreadable'] : []),
     ...(unpriced > 0 ? [`⚠ ${plural(unpriced, 'model')} unpriced`] : []),
     ...(skippedLines > 0 ? [`⚠ ${plural(skippedLines, 'line')} skipped`] : []),
     ...(droppedIterations > 0 ? [`⚠ ${plural(droppedIterations, 'iteration')} dropped`] : []),
@@ -69,11 +80,12 @@ function warnings(status: StatusResponse): string[] {
 
 /** Text for the tmux-style status bar: sources, files, prices, time zone, last sync, indicator and warnings. */
 export function statusView(status: StatusResponse, apiDown: boolean): StatusView {
+  const shown = visibleSources(status.sources);
   const files = status.sources.reduce((sum, source) => sum + source.files, 0);
   const bytes = status.sources.reduce((sum, source) => sum + source.bytes, 0);
   const { source, fetchedAt } = status.pricing;
   return {
-    sources: status.sources.length > 0 ? status.sources.map((item) => item.path).join(', ') : 'no sources',
+    sources: shown.length > 0 ? shown.map((item) => item.path).join(', ') : 'no sources',
     files: `${plural(files, 'file')} · ${formatBytes(bytes)}`,
     prices: fetchedAt === null ? `prices: ${source}` : `prices: ${source} · ${formatStamp(fetchedAt, status.tz)}`,
     tz: `tz ${status.tz}`,
@@ -88,7 +100,7 @@ export type EmptyKind = 'source-missing' | 'backfill' | 'no-data' | 'no-usage';
 /** Which empty state replaces the dashboard, or null when there is something to show. */
 export function emptyStateKind(status: StatusResponse, overview: OverviewResponse | null): EmptyKind | null {
   if (status.data.rows === 0) {
-    if (status.sources.some((source) => !source.ok)) return 'source-missing';
+    if (requiredSourceMissing(status)) return 'source-missing';
     if (status.backfill.active || status.sync.lastSyncAt === null) return 'backfill';
     return 'no-data';
   }

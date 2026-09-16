@@ -103,7 +103,7 @@ describe('StatusTracker', () => {
   it('replaces the source list and never mutates earlier snapshots', () => {
     const tracker = new StatusTracker(() => 0);
     const before = tracker.snapshot();
-    tracker.setSources([{ path: '/p', ok: true, files: 3, bytes: 10, error: null }]);
+    tracker.setSources([{ path: '/p', ok: true, files: 3, bytes: 10, error: null, client: 'claude', required: true, present: true }]);
     expect(tracker.snapshot().sources).toHaveLength(1);
     expect(before.sources).toEqual([]);
   });

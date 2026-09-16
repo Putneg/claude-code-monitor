@@ -1,4 +1,5 @@
 // Acceptance test against your own Claude Code transcripts, read-only: `pnpm test:acceptance`. It never runs in CI.
+// It also ingests your Codex rollouts (the first CODEX_HOME entry, or ~/.codex) when their folders exist; that part only reads.
 // - It reads the first root in CLAUDE_PROJECTS_DIRS, or ~/.claude/projects, and is skipped when that directory does not exist.
 // - It ingests into a temporary database and prints a summary of your own usage (files, rows, models, cost per model).
 // - It compares the monitor's prices with the cost-state totals Claude Code writes into the transcripts. A failure there can
@@ -7,12 +8,14 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { CODEX_SESSION_FOLDERS } from '../../src/server/config.js';
 import { openDatabase, type Db } from '../../src/server/db/connection.js';
 import { migrate } from '../../src/server/db/migrations.js';
 import { createRepos, type Repos } from '../../src/server/db/repos.js';
 import { runIngestCycle, type CycleResult } from '../../src/server/ingest/ingestor.js';
 import { readCompleteLines } from '../../src/server/ingest/reader.js';
 import { scanSource } from '../../src/server/ingest/scanner.js';
+import { claudeRoot, codexRoot } from '../../src/server/ingest/sources.js';
 import { createLogger } from '../../src/server/logger.js';
 import { createPricingService } from '../../src/server/pricing/refresher.js';
 import { resolvePriceKey } from '../../src/server/pricing/resolve.js';
@@ -93,7 +96,7 @@ describe.skipIf(!existsSync(SOURCE))('real transcripts', () => {
   const startedAt = Date.now();
 
   const cycle = () =>
-    runIngestCycle({ db, repos, roots: [SOURCE], toLocalDay: createLocalDay('UTC'), status: new StatusTracker(), logger });
+    runIngestCycle({ db, repos, roots: [claudeRoot(SOURCE)], toLocalDay: createLocalDay('UTC'), status: new StatusTracker(), logger });
 
   beforeAll(async () => {
     tmp = mkdtempSync(join(tmpdir(), 'claude-code-monitor-acceptance-'));
@@ -181,5 +184,113 @@ describe.skipIf(!existsSync(SOURCE))('real transcripts', () => {
     expect(states.length).toBeGreaterThan(0);
     expect(modelFailures).toEqual([]);
     expect(pairFailures).toEqual([]);
+  });
+});
+
+const CODEX_HOME = (process.env.CODEX_HOME ?? join(homedir(), '.codex')).split(',')[0]!.trim();
+const CODEX_ROOTS = CODEX_SESSION_FOLDERS.map((folder) => join(CODEX_HOME, folder)).filter((root) => existsSync(root));
+
+interface RecordTotals {
+  readonly responses: number;
+  readonly input: number;
+  readonly output: number;
+}
+
+interface UsageRecordLine {
+  readonly type: 'token_usage_record';
+  readonly timestamp: string;
+  readonly payload: { readonly response_id: string; readonly usage: { readonly input_tokens: number; readonly output_tokens: number } };
+}
+
+const isUsageRecordLine = (value: unknown): value is UsageRecordLine => {
+  if (typeof value !== 'object' || value === null) return false;
+  const line = value as Partial<UsageRecordLine>;
+  return (
+    line.type === 'token_usage_record' &&
+    typeof line.timestamp === 'string' &&
+    typeof line.payload?.response_id === 'string' &&
+    typeof line.payload.usage?.input_tokens === 'number' &&
+    typeof line.payload.usage.output_tokens === 'number'
+  );
+};
+
+/** One plain whole-file pass over every rollout, independent of the ingestor: the last copy of each response id wins. */
+async function recordTotals(roots: readonly string[], cutoff: number): Promise<RecordTotals> {
+  const responses = new Map<string, { input: number; output: number }>();
+  for (const root of roots) {
+    const scan = await scanSource(root);
+    for (const file of scan.files) {
+      await readCompleteLines(file.path, 0, (raw) => {
+        if (!raw.includes('"token_usage_record"')) return;
+        let value: unknown;
+        try {
+          value = JSON.parse(raw.toString('utf8'));
+        } catch {
+          return;
+        }
+        if (!isUsageRecordLine(value) || Date.parse(value.timestamp) >= cutoff) return;
+        responses.set(value.payload.response_id, { input: value.payload.usage.input_tokens, output: value.payload.usage.output_tokens });
+      });
+    }
+  }
+  const totals = [...responses.values()];
+  return {
+    responses: responses.size,
+    input: totals.reduce((sum, item) => sum + item.input, 0),
+    output: totals.reduce((sum, item) => sum + item.output, 0),
+  };
+}
+
+describe.skipIf(CODEX_ROOTS.length === 0)('real Codex rollouts', () => {
+  let tmp: string;
+  let db: Db;
+  let first: CycleResult;
+  const cutoff = Date.now() - 15 * 60_000;
+
+  beforeAll(async () => {
+    tmp = mkdtempSync(join(tmpdir(), 'claude-code-monitor-codex-acceptance-'));
+    db = openDatabase(join(tmp, 'monitor.db'));
+    migrate(db);
+    const repos = createRepos(db);
+    first = await runIngestCycle({
+      db,
+      repos,
+      roots: CODEX_ROOTS.map(codexRoot),
+      toLocalDay: createLocalDay('UTC'),
+      status: new StatusTracker(),
+      logger,
+    });
+  });
+
+  afterAll(() => {
+    db?.close();
+    if (tmp) rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('stores one row per model response with the recorded token totals', async () => {
+    const expected = await recordTotals(CODEX_ROOTS, cutoff);
+    const stored = db
+      .prepare(
+        `SELECT COUNT(*) AS responses, TOTAL(input + cache_read + cache_write_5m) AS input, TOTAL(output) AS output
+         FROM usage WHERE client = 'codex' AND ts < ?`,
+      )
+      .get(cutoff) as RecordTotals;
+    const perModel = db.prepare(`SELECT model, COUNT(*) AS n FROM usage WHERE client = 'codex' GROUP BY model ORDER BY model`).all() as {
+      model: string;
+      n: number;
+    }[];
+    console.info(
+      `codex: ${first.files} files, ${first.rows} responses, skipped ${first.skipped}; ` +
+        perModel.map((row) => `${row.model} ${row.n}`).join(', '),
+    );
+    expect(first.skipped).toBe(0);
+    expect(stored).toEqual(expected);
+  });
+
+  it('stores no Codex session without a usage record', () => {
+    const orphans = db.prepare(`SELECT COUNT(*) AS n FROM sessions WHERE session_id NOT IN (SELECT session_id FROM usage)`).get() as {
+      n: number;
+    };
+    expect(orphans.n).toBe(0);
   });
 });

@@ -17,6 +17,7 @@ export function dataRequest(view: ViewState, range: DayRange): DataRequest {
     `to=${range.to}`,
     ...(view.models.length > 0 ? [`models=${encodeList(view.models)}`] : []),
     ...(view.projects.length > 0 ? [`projects=${encodeList(view.projects)}`] : []),
+    ...(view.clients.length > 0 ? [`clients=${encodeList(view.clients)}`] : []),
   ];
   const bucket = requestBucket(view.bucket, range);
   const overview = [...filter, `stack=${view.stack}`, ...(bucket === null ? [] : [`bucket=${bucket}`])].join('&');

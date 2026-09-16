@@ -14,6 +14,8 @@ export interface Config {
   /** Extra hostnames the HTTP server answers besides localhost, 127.0.0.1 and [::1]; lower-case, no port. */
   readonly allowedHosts: readonly string[];
   readonly projectsDirs: readonly string[];
+  /** Codex rollout folders: <home>/sessions and <home>/archived_sessions for every CODEX_HOME entry. Optional sources. */
+  readonly codexRoots: readonly string[];
   readonly dbPath: string;
   readonly scanIntervalMs: number;
   readonly timeZone: string;
@@ -50,6 +52,7 @@ const envSchema = z.object({
   HOST: z.string().trim().min(1).default('127.0.0.1'),
   ALLOWED_HOSTS: z.string().optional(),
   CLAUDE_PROJECTS_DIRS: z.string().optional(),
+  CODEX_HOME: z.string().optional(),
   DB_PATH: z.string().trim().min(1).optional(),
   SCAN_INTERVAL_SEC: z.coerce.number().int().min(10).max(3_600).default(60),
   TZ: z
@@ -107,16 +110,43 @@ export function collapseRoots(dirs: readonly string[], caseInsensitive: boolean)
   });
 }
 
-/** Comma-separated roots, resolved to absolute paths; see collapseRoots for repeated and nested ones. */
-function parseDirs(value: string | undefined): string[] {
-  const raw = value ?? join(homedir(), '.claude', 'projects');
-  const dirs = raw
+/** Comma-separated paths with `~` expanded, resolved to absolute paths; blank entries are dropped. */
+function splitPaths(value: string): string[] {
+  return value
     .split(',')
     .map((part) => part.trim())
     .filter((part) => part.length > 0)
     .map((part) => resolvePath(expandHome(part)));
+}
+
+const CASE_INSENSITIVE_PATHS = process.platform === 'win32';
+
+/** Comma-separated roots, resolved to absolute paths; see collapseRoots for repeated and nested ones. */
+function parseDirs(value: string | undefined): string[] {
+  const dirs = splitPaths(value ?? join(homedir(), '.claude', 'projects'));
   if (dirs.length === 0) throw new ConfigError('Invalid configuration: CLAUDE_PROJECTS_DIRS must contain at least one path');
-  return collapseRoots(dirs, process.platform === 'win32');
+  return collapseRoots(dirs, CASE_INSENSITIVE_PATHS);
+}
+
+/** The folders below a Codex home that hold rollout files. */
+export const CODEX_SESSION_FOLDERS = ['sessions', 'archived_sessions'] as const;
+
+/** The rollout folders of every CODEX_HOME entry, or of ~/.codex when CODEX_HOME is unset or blank. */
+function parseCodexRoots(value: string | undefined): string[] {
+  const listed = splitPaths(value ?? '');
+  const homes = listed.length > 0 ? listed : [join(homedir(), '.codex')];
+  const roots = homes.flatMap((home) => CODEX_SESSION_FOLDERS.map((folder) => join(home, folder)));
+  return collapseRoots(roots, CASE_INSENSITIVE_PATHS);
+}
+
+/** A file under both a Claude root and a Codex root would reach the wrong parser, so the two sets must not overlap. */
+function assertSeparateRoots(claudeDirs: readonly string[], codexRoots: readonly string[]): void {
+  const key = (path: string): string => (CASE_INSENSITIVE_PATHS ? path.toLowerCase() : path);
+  const overlaps = (a: string, b: string): boolean => isWithin(key(a), key(b)) || isWithin(key(b), key(a));
+  const clash = codexRoots.find((root) => claudeDirs.some((dir) => overlaps(root, dir)));
+  if (clash !== undefined) {
+    throw new ConfigError(`Invalid configuration: CODEX_HOME: ${clash} overlaps a CLAUDE_PROJECTS_DIRS entry`);
+  }
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -126,11 +156,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     throw new ConfigError(`Invalid configuration: ${details}`);
   }
   const values = parsed.data;
+  const projectsDirs = parseDirs(values.CLAUDE_PROJECTS_DIRS);
+  const codexRoots = parseCodexRoots(values.CODEX_HOME);
+  assertSeparateRoots(projectsDirs, codexRoots);
   return {
     port: values.PORT,
     host: values.HOST,
     allowedHosts: parseAllowedHosts(values.ALLOWED_HOSTS),
-    projectsDirs: parseDirs(values.CLAUDE_PROJECTS_DIRS),
+    projectsDirs,
+    codexRoots,
     dbPath: values.DB_PATH ?? join(process.cwd(), 'data', 'monitor.db'),
     scanIntervalMs: values.SCAN_INTERVAL_SEC * 1_000,
     timeZone: values.TZ,

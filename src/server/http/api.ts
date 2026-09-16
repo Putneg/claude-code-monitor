@@ -10,6 +10,7 @@ import type { PricingService } from '../pricing/refresher.js';
 import type { StatusTracker } from '../status.js';
 import { createLocalDay, daysInclusive } from '../time.js';
 import { overviewQuerySchema, parseQuery, QueryError, resolveBucket, resolveFilter, sessionsQuerySchema } from './params.js';
+import { toCodexLimit } from './codex-limits.js';
 import { createResponseCache } from './response-cache.js';
 
 export interface ApiDeps {
@@ -74,6 +75,7 @@ function buildStatus(deps: ApiDeps, toLocalDay: (tsMs: number) => string): Statu
     sources: snapshot.sources,
     pricing: deps.pricing.state(),
     data: { firstDay: bounds.firstDay, lastDay: bounds.lastDay, rows: deps.repos.usage.count() },
+    codexLimits: deps.repos.codexLimits.all().map(toCodexLimit),
   };
 }
 

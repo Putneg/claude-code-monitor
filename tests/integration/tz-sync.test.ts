@@ -25,6 +25,7 @@ function seedRow(repos: ReturnType<typeof createTestDb>['repos']): void {
     cacheWrite1h: 0,
     webSearchRequests: 0,
     webFetchRequests: 0,
+    client: 'claude',
   });
 }
 

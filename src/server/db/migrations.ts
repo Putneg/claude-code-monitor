@@ -1,5 +1,5 @@
 import type { Db } from './connection.js';
-import { SCHEMA_V1, SCHEMA_V2 } from './schema.js';
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3 } from './schema.js';
 
 interface Migration {
   readonly version: number;
@@ -9,6 +9,7 @@ interface Migration {
 const MIGRATIONS: readonly Migration[] = [
   { version: 1, sql: SCHEMA_V1 },
   { version: 2, sql: SCHEMA_V2 },
+  { version: 3, sql: SCHEMA_V3 },
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);

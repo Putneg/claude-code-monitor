@@ -28,11 +28,14 @@ function fuzzyMatches(model: string, key: string): boolean {
   return containsAtBoundary(model, key) || containsAtBoundary(key, model);
 }
 
+/** LiteLLM also lists some models under a provider prefix. */
+const PROVIDER_PREFIXES = ['anthropic/', 'openai/'] as const;
+
 /** Port of ccusage's model matching (MIT). Returns the LiteLLM key or null. */
 export function resolvePriceKey(model: string, keys: readonly string[]): string | null {
   if (keys.includes(model)) return model;
-  const prefixed = `anthropic/${model}`;
-  if (keys.includes(prefixed)) return prefixed;
+  const prefixed = PROVIDER_PREFIXES.map((prefix) => `${prefix}${model}`).find((key) => keys.includes(key));
+  if (prefixed !== undefined) return prefixed;
   const normalizedModel = normalize(model);
   const candidates = [...keys].sort().filter((key) => fuzzyMatches(normalizedModel, normalize(key)));
   return candidates.reduce<string | null>((best, key) => (best === null || key.length > best.length ? key : best), null);

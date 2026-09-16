@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_LIST_ITEM_LENGTH } from '../../shared/limits.js';
+import type { Client } from '../../shared/models.js';
 
 export type UsageKind = 'primary' | 'advisor' | 'fallback_attempt';
 
@@ -12,6 +13,8 @@ export interface TokenCounts {
 }
 
 export interface UsageRow extends TokenCounts {
+  /** The agent that wrote the transcript: Claude Code or Codex. */
+  readonly client: Client;
   readonly messageId: string;
   readonly requestId: string;
   readonly kind: UsageKind;
@@ -28,7 +31,7 @@ export interface UsageRow extends TokenCounts {
   readonly webFetchRequests: number;
 }
 
-export type SkipReason = 'invalid_json' | 'invalid_record' | 'invalid_timestamp';
+export type SkipReason = 'invalid_json' | 'invalid_record' | 'invalid_timestamp' | 'unknown_model';
 
 export type ParsedLine =
   | { readonly kind: 'ignored' }
@@ -144,7 +147,7 @@ export function normalizeCwd(cwd: string | null | undefined): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -226,7 +229,7 @@ function parseTitle(value: Record<string, unknown>): ParsedLine {
   return { kind: 'title', sessionId: parsed.data.sessionId, title: truncateCodePoints(parsed.data.aiTitle, MAX_TITLE_CODE_POINTS) };
 }
 
-const inTimestampWindow = (ts: number, now: number): boolean =>
+export const inTimestampWindow = (ts: number, now: number): boolean =>
   Number.isFinite(ts) && ts >= MIN_TIMESTAMP_MS && ts <= now + FUTURE_SLACK_MS;
 
 function parseAssistant(value: Record<string, unknown>, ctx: ParseContext): ParsedLine {
@@ -242,6 +245,7 @@ function parseAssistant(value: Record<string, unknown>, ctx: ParseContext): Pars
   const usage = record.message.usage;
   const iterations = parseIterations(usage.iterations ?? []);
   const base: RowBase = {
+    client: 'claude',
     messageId: record.message.id,
     requestId: record.requestId ?? '',
     sessionId: record.sessionId,

@@ -1,8 +1,12 @@
+import type { Client } from '../../../shared/models.js';
+
 export interface UsageFilter {
   readonly from: string;
   readonly to: string;
   readonly models: readonly string[];
   readonly projects: readonly string[];
+  /** Empty means every client. */
+  readonly clients: readonly Client[];
 }
 
 export interface SqlFragment {
@@ -25,6 +29,7 @@ export function buildWhere(filter: UsageFilter, alias?: string): SqlFragment {
     { sql: `${col('local_day')} BETWEEN @from AND @to`, params: { from: filter.from, to: filter.to } },
     buildIn(col('model'), 'model', filter.models),
     buildIn(col('project_id'), 'project', filter.projects),
+    buildIn(col('client'), 'client', filter.clients),
   ].filter((part): part is SqlFragment => part !== null);
   return {
     sql: parts.map((part) => part.sql).join(' AND '),

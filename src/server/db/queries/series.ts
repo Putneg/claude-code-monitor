@@ -4,6 +4,7 @@ import {
   PROJECT_PALETTE,
   TOKEN_TYPE_META,
   TOKEN_TYPE_ORDER,
+  clientMeta,
   modelColor,
   modelLabel,
   projectLabel,
@@ -153,9 +154,16 @@ function projectSeries(db: Db, filter: UsageFilter, axis: Axis): OverviewSeries 
   return assemble('project', axis, cells, hasOther ? [...keys, { key: OTHER_KEY, label: 'other', color: OTHER_COLOR }] : keys);
 }
 
+function clientSeries(db: Db, filter: UsageFilter, axis: Axis): OverviewSeries {
+  const cells = selectCells(db, filter, axis, 'client');
+  const keys = keysByCost(cells).map((key) => ({ key, ...clientMeta(key) }));
+  return assemble('client', axis, cells, keys);
+}
+
 export function querySeries(db: Db, filter: UsageFilter, options: SeriesOptions): OverviewSeries {
   const axis = options.bucket === 'hour' ? hourAxis(filter, options.timeZone) : dayAxis(filter);
   if (options.stack === 'type') return typeSeries(db, filter, axis);
   if (options.stack === 'project') return projectSeries(db, filter, axis);
+  if (options.stack === 'client') return clientSeries(db, filter, axis);
   return modelSeries(db, filter, axis);
 }

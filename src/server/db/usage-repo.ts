@@ -20,11 +20,12 @@ const TOKEN_SUM = (table: string): string =>
 const UPSERT_SQL = `
 INSERT INTO usage (message_id, request_id, kind, seq, session_id, agent_id, is_sidechain, model, speed,
                    ts, local_day, input, output, cache_read, cache_write_5m, cache_write_1h,
-                   web_search_requests, web_fetch_requests)
+                   web_search_requests, web_fetch_requests, client)
 VALUES (@messageId, @requestId, @kind, @seq, @sessionId, @agentId, @isSidechain, @model, @speed,
         @ts, @localDay, @input, @output, @cacheRead, @cacheWrite5m, @cacheWrite1h,
-        @webSearchRequests, @webFetchRequests)
+        @webSearchRequests, @webFetchRequests, @client)
 ON CONFLICT (message_id, kind, seq) DO UPDATE SET
+  client = excluded.client,
   request_id = excluded.request_id, session_id = excluded.session_id, agent_id = excluded.agent_id,
   is_sidechain = excluded.is_sidechain, model = excluded.model, speed = excluded.speed, ts = excluded.ts,
   local_day = excluded.local_day, input = excluded.input, output = excluded.output, cache_read = excluded.cache_read,
@@ -55,6 +56,7 @@ function toParams(row: UsageRow) {
     cacheWrite1h: row.cacheWrite1h,
     webSearchRequests: row.webSearchRequests,
     webFetchRequests: row.webFetchRequests,
+    client: row.client,
   };
 }
 

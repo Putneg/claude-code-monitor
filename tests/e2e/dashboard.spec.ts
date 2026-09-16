@@ -1,34 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
-import type { StatusResponse } from '../../src/shared/api.js';
 import { DATE_APPLY_DELAY_MS } from '../../src/web/lib/date-input.js';
 import { formatTokens } from '../../src/web/lib/format.js';
 import { POLL_INTERVAL_MS } from '../../src/web/lib/poll.js';
 import { BETA_TOKENS, E2E_FROM, E2E_QUERY, E2E_TO, E2E_TODAY, HAIKU, OPUS, SONNET, totalTokens } from './fixture.js';
-
-/** Full-page screenshots for reviewers; Playwright clears test-results/ at the start of each run. */
-const SCREENS = 'test-results/screens';
-
-/** Waits until the first ingest cycle has finished (lastSyncAt is set at the end of a cycle) and stored rows. */
-async function waitForData(page: Page): Promise<void> {
-  await expect
-    .poll(
-      async () => {
-        const status = (await (await page.request.get('/api/status')).json()) as StatusResponse;
-        return status.sync.lastSyncAt !== null && status.data.rows > 0;
-      },
-      { timeout: 30_000 },
-    )
-    .toBe(true);
-}
-
-function trackConsole(page: Page): string[] {
-  const problems: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' || message.type() === 'warning') problems.push(`${message.type()}: ${message.text()}`);
-  });
-  page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
-  return problems;
-}
+import { NO_SIDE_SCROLL, SCREENS, trackConsole, waitForData } from './support.js';
 
 test.beforeEach(async ({ page }) => {
   await waitForData(page);
@@ -317,9 +292,6 @@ test('typing a year digit by digit applies the date once, after the last digit',
   expect(problems).toEqual([]);
 });
 
-/** True when nothing scrolls the page sideways. A string, so the spec typechecks without DOM types. */
-const NO_SIDE_SCROLL = 'document.documentElement.scrollWidth <= document.documentElement.clientWidth';
-
 test('fills wide screens and keeps narrow ones from scrolling sideways', async ({ page }) => {
   const problems = trackConsole(page);
   const timeline = page.getByTestId('timeline');
@@ -452,4 +424,16 @@ test('clearing the project selection keeps the picker open and focused', async (
   // A blur with no new focus target (a window switch) is not a move out of the picker.
   await clear.blur();
   await expect(panel).toBeVisible();
+});
+
+test('shows no client switch or Codex limits without Codex data', async ({ page }) => {
+  await page.goto(RANGE);
+  await expect(page.getByTestId('spend-hero')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'client' })).toHaveCount(0);
+  await expect(page.getByTestId('codex-limits')).toHaveCount(0);
+  await expect(page.getByTestId('timeline').getByRole('button', { name: 'client', exact: true })).toHaveCount(0);
+  // The fixture server points at a Codex home that does not exist: an absent optional source is neither listed nor a warning.
+  await expect(page.getByTestId('status-bar')).not.toContainText('codex');
+  await expect(page.getByTestId('status-bar')).not.toContainText('⚠');
+  await expect(page.getByTestId('spend-hero')).not.toContainText('clients');
 });

@@ -7,7 +7,7 @@
   import type { Bucket, OverviewSeries, Stack } from '../../shared/api';
   import { brushRange, type DayRange } from '../lib/range';
   import { brushIndices, buildTimelineOption, timelineSummary } from '../lib/timeline-option';
-  import { STACKS, type Unit } from '../lib/view-state';
+  import type { Unit } from '../lib/view-state';
 
   // The brush preprocessor injects a toolbox, so ToolboxComponent must be registered; the option hides it.
   use([LineChart, GridComponent, TooltipComponent, BrushComponent, MarkPointComponent, ToolboxComponent, CanvasRenderer]);
@@ -19,6 +19,7 @@
     series: OverviewSeries;
     bucket: Bucket;
     stack: Stack;
+    stacks: readonly Stack[];
     unit: Unit;
     cumulative: boolean;
     dayAllowed: boolean;
@@ -30,8 +31,21 @@
     onPointer: (inside: boolean) => void;
   }
 
-  let { series, bucket, stack, unit, cumulative, dayAllowed, hourAllowed, onStack, onBucket, onCumulative, onBrush, onPointer }: Props =
-    $props();
+  let {
+    series,
+    bucket,
+    stack,
+    stacks,
+    unit,
+    cumulative,
+    dayAllowed,
+    hourAllowed,
+    onStack,
+    onBucket,
+    onCumulative,
+    onBrush,
+    onPointer,
+  }: Props = $props();
 
   let container: HTMLDivElement;
   let chart = $state.raw<EChartsType | null>(null);
@@ -85,7 +99,7 @@
   <div class="head">
     <div class="controls">
       <span class="lbl">stack</span>
-      {#each STACKS as choice (choice)}
+      {#each stacks as choice (choice)}
         <button type="button" class="opt" class:on-soft={stack === choice} aria-pressed={stack === choice} onclick={() => onStack(choice)}>
           {choice}
         </button>

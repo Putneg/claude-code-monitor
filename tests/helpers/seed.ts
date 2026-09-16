@@ -34,6 +34,7 @@ export function makeRow(overrides: Partial<UsageRow> = {}): UsageRow {
     cacheWrite1h: 0,
     webSearchRequests: 0,
     webFetchRequests: 0,
+    client: 'claude',
     ...overrides,
   };
 }
@@ -111,5 +112,5 @@ export function seedScenario(repos: Repos): void {
 }
 
 export function range(from: string, to: string, extra: Partial<UsageFilter> = {}): UsageFilter {
-  return { from, to, models: [], projects: [], ...extra };
+  return { from, to, models: [], projects: [], clients: [], ...extra };
 }

@@ -10,6 +10,7 @@ import {
   MAX_RANGE_DAYS,
   MIN_QUERY_DAY,
 } from '../../shared/limits.js';
+import { CLIENTS, type Client } from '../../shared/models.js';
 import type { UsageFilter } from '../db/queries/filter-sql.js';
 import { addDays, daysInclusive, isValidDay } from '../time.js';
 
@@ -44,12 +45,15 @@ const list = z
   )
   .pipe(z.array(z.string().max(MAX_LIST_ITEM_LENGTH)).max(MAX_LIST_ITEMS));
 
-const filterShape = { from: day.optional(), to: day.optional(), models: list, projects: list };
+/** Known client ids, each once. */
+const clientList = list.pipe(z.array(z.enum(CLIENTS))).transform((clients) => [...new Set(clients)]);
+
+const filterShape = { from: day.optional(), to: day.optional(), models: list, projects: list, clients: clientList };
 
 export const overviewQuerySchema = z.object({
   ...filterShape,
   bucket: z.enum(['day', 'hour']).optional(),
-  stack: z.enum(['model', 'type', 'project']).default('model'),
+  stack: z.enum(['model', 'type', 'project', 'client']).default('model'),
 });
 
 export const sessionsQuerySchema = z.object({
@@ -69,6 +73,7 @@ export interface FilterQuery {
   readonly to?: string | undefined;
   readonly models: readonly string[];
   readonly projects: readonly string[];
+  readonly clients: readonly Client[];
 }
 
 export function resolveFilter(query: FilterQuery, today: string): UsageFilter {
@@ -76,7 +81,7 @@ export function resolveFilter(query: FilterQuery, today: string): UsageFilter {
   const from = query.from ?? addDays(to, -(DEFAULT_RANGE_DAYS - 1));
   if (from > to) throw new QueryError({ from: ['must not be after to'] });
   if (daysInclusive(from, to) > MAX_RANGE_DAYS) throw new QueryError({ from: [`range is limited to ${MAX_RANGE_DAYS} days`] });
-  return { from, to, models: [...query.models], projects: [...query.projects] };
+  return { from, to, models: [...query.models], projects: [...query.projects], clients: [...query.clients] };
 }
 
 export function resolveBucket(requested: Bucket | undefined, days: number): Bucket {

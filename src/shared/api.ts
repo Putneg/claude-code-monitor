@@ -1,11 +1,11 @@
-import type { TokenTypeKey } from './models.js';
+import type { Client, TokenTypeKey } from './models.js';
 
-export type { TokenTypeKey };
+export type { Client, TokenTypeKey };
 
 /** Local calendar day in the server time zone: 'YYYY-MM-DD'. */
 export type Day = string;
 export type Bucket = 'day' | 'hour';
-export type Stack = 'model' | 'type' | 'project';
+export type Stack = 'model' | 'type' | 'project' | 'client';
 export type SessionSort = 'cost' | 'recent';
 export type PricingSource = 'litellm' | 'snapshot' | 'none';
 
@@ -34,6 +34,11 @@ export interface SourceStatus {
   readonly files: number;
   readonly bytes: number;
   readonly error: string | null;
+  readonly client: Client;
+  /** False for Codex folders: their absence is not a problem. */
+  readonly required: boolean;
+  /** False when the root does not exist or holds no transcripts. */
+  readonly present: boolean;
 }
 
 export interface SyncStatus {
@@ -64,6 +69,29 @@ export interface PricingStatus {
   readonly unpricedModels: readonly string[];
 }
 
+export interface CodexLimitWindow {
+  readonly slot: 'primary' | 'secondary';
+  /** 0-100. */
+  readonly usedPercent: number;
+  readonly windowMinutes: number;
+  readonly resetsAt: string | null;
+}
+
+export interface CodexCreditsView {
+  readonly hasCredits: boolean;
+  readonly unlimited: boolean;
+  readonly balance: string | null;
+}
+
+/** The newest Codex rate-limit reading for one limit id. */
+export interface CodexLimit {
+  readonly limitId: string;
+  readonly planType: string | null;
+  readonly windows: readonly CodexLimitWindow[];
+  readonly credits: CodexCreditsView | null;
+  readonly observedAt: string;
+}
+
 export interface StatusResponse {
   readonly now: string;
   readonly today: Day;
@@ -73,6 +101,8 @@ export interface StatusResponse {
   readonly sources: readonly SourceStatus[];
   readonly pricing: PricingStatus;
   readonly data: { readonly firstDay: Day | null; readonly lastDay: Day | null; readonly rows: number };
+  /** Empty when no Codex rollout has reported rate limits. */
+  readonly codexLimits: readonly CodexLimit[];
 }
 
 export interface ModelOption {
@@ -88,9 +118,17 @@ export interface ProjectOption {
   readonly label: string;
 }
 
+export interface ClientOption {
+  readonly id: Client;
+  readonly label: string;
+  readonly color: string;
+}
+
 export interface FiltersResponse {
   readonly models: readonly ModelOption[];
   readonly projects: readonly ProjectOption[];
+  /** Clients with usage in the database, in display order. */
+  readonly clients: readonly ClientOption[];
   readonly bounds: { readonly firstDay: Day | null; readonly lastDay: Day | null };
 }
 
@@ -155,6 +193,15 @@ export interface ProjectBreakdown {
   readonly sessions: number;
 }
 
+export interface ClientBreakdown {
+  readonly client: Client;
+  readonly label: string;
+  readonly color: string;
+  readonly tokensTotal: number;
+  readonly cost: number;
+  readonly share: number;
+}
+
 export interface OverviewResponse {
   readonly range: { readonly from: Day; readonly to: Day; readonly days: number; readonly bucket: Bucket };
   readonly totals: OverviewTotals;
@@ -163,10 +210,13 @@ export interface OverviewResponse {
   readonly byModel: readonly ModelBreakdown[];
   /** All projects in range, sorted by cost descending; the UI shows the top 8. */
   readonly byProject: readonly ProjectBreakdown[];
+  /** Clients in range, sorted by cost descending. */
+  readonly byClient: readonly ClientBreakdown[];
 }
 
 export interface SessionSummary {
   readonly id: string;
+  readonly client: Client;
   readonly title: string | null;
   readonly projectId: string | null;
   readonly projectLabel: string | null;

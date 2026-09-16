@@ -171,12 +171,12 @@ export function createPricingService(deps: PricingDeps): PricingService {
     try {
       const { prices, tieredKeys } = normalizeLiteLlm(await deps.fetchPayload());
       const entries = Object.keys(prices).length;
-      if (entries === 0) throw new Error('LiteLLM payload contains no Anthropic prices');
+      if (entries === 0) throw new Error('LiteLLM payload contains no Anthropic or OpenAI prices');
       replacePrices(deps, prices, 'litellm', deps.now());
       if (tieredKeys.length > 0) {
         deps.logger.warn(
           { keys: tieredKeys.slice(0, MAX_LOGGED_KEYS), count: tieredKeys.length },
-          'tiered (>200k) pricing is not supported; base rates are used',
+          'tiered (long-context) pricing is not supported; base rates are used',
         );
       }
       deps.logger.info({ entries }, 'refreshed LiteLLM prices');

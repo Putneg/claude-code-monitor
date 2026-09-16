@@ -35,6 +35,7 @@ function testConfig(root: string, projectsDir: string, name: string): Config {
     host: '127.0.0.1',
     allowedHosts: [],
     projectsDirs: [projectsDir],
+    codexRoots: [],
     dbPath: join(root, name, 'monitor.db'),
     scanIntervalMs: 60_000,
     timeZone: 'UTC',
@@ -62,7 +63,7 @@ describe('startService', () => {
     const base = `http://127.0.0.1:${service.port}`;
 
     const status = await waitForSync(base);
-    expect(status.sources[0]).toMatchObject({ ok: true, files: 1 });
+    expect(status.sources[0]).toMatchObject({ ok: true, files: 1, client: 'claude', required: true, present: true });
     expect(status.data.rows).toBe(1);
 
     const overview = (await (await fetch(`${base}/api/overview?from=2026-09-10&to=2026-09-10`)).json()) as OverviewResponse;

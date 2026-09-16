@@ -26,6 +26,9 @@ data/
 # e2e server data (fixture transcripts + SQLite)
 .e2e-data/
 
+# empty Codex mount points Docker Compose creates when CODEX_HOME is unset
+.codex-none/
+
 # editors and logs
 /.idea/
 .vscode/

@@ -75,6 +75,7 @@ describe('parseLine', () => {
         cacheWrite1h: 39268,
         webSearchRequests: 0,
         webFetchRequests: 0,
+        client: 'claude',
       },
     ]);
   });
@@ -296,6 +297,17 @@ describe('parseLine', () => {
     });
     const rows = usageOf(parseLine(line, { toLocalDay: () => '1999-01-01', now: NOW }));
     expect(rows[0]?.localDay).toBe('1999-01-01');
+  });
+
+  it('marks every row of a Claude Code line with the claude client', () => {
+    const line = assistantLine({
+      messageId: 'msg_c',
+      model: 'claude-opus-5',
+      sessionId: 's1',
+      timestamp: TS,
+      usage: { output: 1, iterations: [{ type: 'advisor_message', model: 'claude-fable-5-1', output: 2 }] },
+    });
+    expect(usageOf(parseLine(line, ctx)).map((row) => row.client)).toEqual(['claude', 'claude']);
   });
 });
 

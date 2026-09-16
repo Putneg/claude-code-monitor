@@ -39,7 +39,7 @@ function setup(overrides: Partial<AppDeps> = {}) {
     const response = await app.request(path);
     return { response, body: (await response.json()) as unknown };
   };
-  return { app, db, status, get };
+  return { app, db, repos, status, get };
 }
 
 describe('GET /api/status', () => {
@@ -54,6 +54,7 @@ describe('GET /api/status', () => {
       sync: { state: 'idle', lastSyncAt: null, lastChangeAt: null },
       pricing: { source: 'snapshot', unpricedModels: ['claude-mystery'] },
       data: { firstDay: '2026-09-09', lastDay: '2026-09-11', rows: 5 },
+      codexLimits: [],
     });
     expect(response.headers.get('content-security-policy')).toBe(
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
@@ -263,6 +264,8 @@ describe('GET /api/overview', () => {
     ['/api/overview?bucket=hour'],
     ['/api/overview?stack=bogus'],
     ['/api/overview?from=9999-12-31&to=9999-12-31'],
+    ['/api/overview?clients=other'],
+    ['/api/overview?stack=client&clients=claude,x'],
   ])('rejects %s with 400', async (path) => {
     const { response, body } = await setup().get(path);
     expect(response.status).toBe(400);
@@ -447,5 +450,41 @@ describe('health and fallbacks', () => {
     } finally {
       rmSync(secretPath, { force: true });
     }
+  });
+});
+
+describe('Codex limits in /api/status', () => {
+  it('reports the stored rate-limit readings', async () => {
+    const { get, repos } = setup();
+    repos.codexLimits.upsert({
+      limitId: 'codex',
+      planType: 'prolite',
+      primary: { usedPercent: 66, windowMinutes: 10_080, resetsAt: Date.parse('2026-09-15T09:00:00Z') },
+      secondary: null,
+      credits: null,
+      observedAt: Date.parse('2026-09-11T11:00:00Z'),
+    });
+    const { body } = await get('/api/status');
+    expect((body as StatusResponse).codexLimits).toEqual([
+      {
+        limitId: 'codex',
+        planType: 'prolite',
+        windows: [{ slot: 'primary', usedPercent: 66, windowMinutes: 10_080, resetsAt: '2026-09-15T09:00:00.000Z' }],
+        credits: null,
+        observedAt: '2026-09-11T11:00:00.000Z',
+      },
+    ]);
+  });
+});
+
+describe('client filter', () => {
+  it('filters the overview by client and stacks it by client', async () => {
+    const { get } = setup();
+    const { response, body } = await get('/api/overview?from=2026-09-09&to=2026-09-11&clients=codex&stack=client');
+    expect(response.status).toBe(200);
+    const overview = body as OverviewResponse;
+    expect(overview.totals.cost.total).toBe(0);
+    expect(overview.series.stack).toBe('client');
+    expect(overview.byClient).toEqual([]);
   });
 });

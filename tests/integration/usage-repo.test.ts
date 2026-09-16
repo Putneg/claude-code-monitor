@@ -22,6 +22,7 @@ const row = (overrides: Partial<UsageRow> = {}): UsageRow => ({
   cacheWrite1h: 5,
   webSearchRequests: 0,
   webFetchRequests: 0,
+  client: 'claude',
   ...overrides,
 });
 
@@ -53,6 +54,7 @@ describe('usage repo upsert', () => {
         cache_read: 100,
         cache_write_5m: 0,
         cache_write_1h: 5,
+        client: 'claude',
       }),
     ]);
   });
@@ -105,6 +107,12 @@ describe('usage repo upsert', () => {
       ['advisor', 'claude-fable-5-1'],
       ['primary', 'claude-opus-5'],
     ]);
+  });
+
+  it('stores the client of a row', () => {
+    const { repo, read } = setup();
+    repo.upsert(row({ messageId: 'resp_1', client: 'codex', model: 'gpt-5.6-sol' }));
+    expect(read()).toEqual([expect.objectContaining({ message_id: 'resp_1', client: 'codex', model: 'gpt-5.6-sol' })]);
   });
 });
 

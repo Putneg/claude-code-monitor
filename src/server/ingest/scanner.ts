@@ -1,7 +1,9 @@
 import type { Dirent } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
+import type { Client } from '../../shared/models.js';
 import type { FileState } from '../db/file-state-repo.js';
+import type { SourceRoot } from './sources.js';
 
 export interface FileInfo {
   readonly path: string;
@@ -9,20 +11,34 @@ export interface FileInfo {
   readonly mtimeMs: number;
 }
 
+/** Why a failed root has no files: it does not exist, or it holds no .jsonl files and nothing unreadable. */
+export type RootAbsence = 'missing' | 'empty';
+
 export interface SourceScan {
   readonly root: string;
   readonly ok: boolean;
   readonly error: string | null;
+  /** Set only on a failed root that is absent rather than broken. */
+  readonly absence?: RootAbsence;
   readonly files: readonly FileInfo[];
   /** Paths under the root that could not be listed or stat'ed; skipped. */
   readonly unreadable: readonly string[];
 }
 
+/** A scanned source root, with the client its files belong to. */
+export interface RootScan extends SourceScan {
+  readonly client: Client;
+  readonly required: boolean;
+}
+
 export interface WorkItem {
   readonly file: FileInfo;
+  readonly client: Client;
   readonly startOffset: number;
   /** The stored fingerprint when resuming (startOffset > 0), else null. */
   readonly fingerprint: string | null;
+  /** The stored parser state when resuming (startOffset > 0), else null. */
+  readonly parserState: string | null;
 }
 
 export interface WorkPlan {
@@ -39,10 +55,11 @@ interface Found {
 
 const NOTHING: Found = { files: [], unreadable: [] };
 
-const failed = (root: string, error: string, unreadable: readonly string[] = []): SourceScan => ({
+const failed = (root: string, error: string, unreadable: readonly string[] = [], absence?: RootAbsence): SourceScan => ({
   root,
   ok: false,
   error,
+  ...(absence === undefined ? {} : { absence }),
   files: [],
   unreadable,
 });
@@ -95,15 +112,23 @@ export async function scanSource(rootInput: string): Promise<SourceScan> {
     if (!(await stat(root)).isDirectory()) return failed(root, 'not a directory');
     const entries = await readdir(root, { withFileTypes: true });
     const found = merge(await Promise.all(entries.map((entry) => visit(root, entry))));
-    if (found.files.length === 0) return failed(root, emptyRootError(found.unreadable.length), found.unreadable);
+    if (found.files.length === 0) {
+      const absence = found.unreadable.length === 0 ? 'empty' : undefined;
+      return failed(root, emptyRootError(found.unreadable.length), found.unreadable, absence);
+    }
     return { root, ok: true, error: null, files: found.files, unreadable: found.unreadable };
   } catch (error) {
-    return failed(root, `not accessible: ${errorCode(error)}`);
+    const code = errorCode(error);
+    return failed(root, `not accessible: ${code}`, [], code === 'ENOENT' ? 'missing' : undefined);
   }
 }
 
-export function scanSources(roots: readonly string[]): Promise<SourceScan[]> {
-  return Promise.all(roots.map(scanSource));
+export async function scanRoot(root: SourceRoot): Promise<RootScan> {
+  return { ...(await scanSource(root.path)), client: root.client, required: root.required };
+}
+
+export function scanSources(roots: readonly SourceRoot[]): Promise<RootScan[]> {
+  return Promise.all(roots.map(scanRoot));
 }
 
 function startOffsetFor(file: FileInfo, known: FileState | undefined): number | null {
@@ -117,15 +142,25 @@ const isUnder = (path: string, root: string): boolean => path === root || path.s
 
 const isUnderAny = (path: string, roots: readonly string[]): boolean => roots.some((root) => isUnder(path, root));
 
-export function planWork(scans: readonly SourceScan[], known: ReadonlyMap<string, FileState>): WorkPlan {
+function workItemFor(file: FileInfo, client: Client, state: FileState | undefined): WorkItem[] {
+  const startOffset = startOffsetFor(file, state);
+  if (startOffset === null) return [];
+  const resuming = startOffset > 0;
+  return [
+    {
+      file,
+      client,
+      startOffset,
+      fingerprint: resuming ? (state?.fingerprint ?? null) : null,
+      parserState: resuming ? (state?.parserState ?? null) : null,
+    },
+  ];
+}
+
+export function planWork(scans: readonly RootScan[], known: ReadonlyMap<string, FileState>): WorkPlan {
   const files = scans.flatMap((scan) => scan.files);
-  const work = files
-    .flatMap((file): WorkItem[] => {
-      const state = known.get(file.path);
-      const startOffset = startOffsetFor(file, state);
-      if (startOffset === null) return [];
-      return [{ file, startOffset, fingerprint: startOffset > 0 ? (state?.fingerprint ?? null) : null }];
-    })
+  const work = scans
+    .flatMap((scan) => scan.files.flatMap((file) => workItemFor(file, scan.client, known.get(file.path))))
     .sort((a, b) => a.file.mtimeMs - b.file.mtimeMs || a.file.path.localeCompare(b.file.path));
   const present = new Set(files.map((file) => file.path));
   const okRoots = scans.filter((scan) => scan.ok).map((scan) => scan.root);

@@ -5,7 +5,8 @@ import { queryTotals } from '../../src/server/db/queries/totals.js';
 import { runIngestCycle, type IngestDeps } from '../../src/server/ingest/ingestor.js';
 import { FINGERPRINT_BYTES, readFingerprint } from '../../src/server/ingest/fingerprint.js';
 import { createNotices } from '../../src/server/ingest/notices.js';
-import type { SourceScan } from '../../src/server/ingest/scanner.js';
+import type { RootScan } from '../../src/server/ingest/scanner.js';
+import { claudeRoot, codexRoot } from '../../src/server/ingest/sources.js';
 import { createLogger } from '../../src/server/logger.js';
 import { StatusTracker } from '../../src/server/status.js';
 import { createLocalDay } from '../../src/server/time.js';
@@ -24,7 +25,7 @@ function setup(overrides: Partial<IngestDeps> = {}) {
   const deps: IngestDeps = {
     db,
     repos,
-    roots: [tree.root],
+    roots: [claudeRoot(tree.root)],
     toLocalDay: createLocalDay('UTC'),
     status,
     logger: createLogger('silent'),
@@ -86,7 +87,9 @@ describe('runIngestCycle', () => {
     ]);
     expect(repos.sessions.get('s1')).toMatchObject({ projectPath: '/home/dev/alpha', projectSource: 'main', title: 'Alpha feature' });
     expect(status.snapshot().backfill).toMatchObject({ active: false, filesDone: 2, filesTotal: 2 });
-    expect(status.snapshot().sources).toEqual([{ path: tree.root, ok: true, files: 2, bytes: expect.any(Number), error: null }]);
+    expect(status.snapshot().sources).toEqual([
+      { path: tree.root, ok: true, files: 2, bytes: expect.any(Number), error: null, client: 'claude', required: true, present: true },
+    ]);
   });
 
   it('is idempotent when nothing changed', async () => {
@@ -335,7 +338,7 @@ describe('runIngestCycle', () => {
   });
 
   it('reports a missing source without throwing', async () => {
-    const { run, status } = setup({ roots: [join(tmpdir(), 'claude-code-monitor-root-that-does-not-exist')] });
+    const { run, status } = setup({ roots: [claudeRoot(join(tmpdir(), 'claude-code-monitor-root-that-does-not-exist'))] });
     const result = await run();
     expect(result.files).toBe(0);
     expect(status.snapshot().sources[0]).toMatchObject({ ok: false, files: 0 });
@@ -347,7 +350,7 @@ describe('runIngestCycle', () => {
     const info = vi.spyOn(logger, 'info');
     const { deps } = setup({ logger, notices: createNotices() });
     const root = tree.path('later');
-    const cycle = () => runIngestCycle({ ...deps, roots: [root] });
+    const cycle = () => runIngestCycle({ ...deps, roots: [claudeRoot(root)] });
     await cycle();
     await cycle();
     expect(warn).toHaveBeenCalledTimes(1);
@@ -363,8 +366,16 @@ describe('runIngestCycle', () => {
     const warn = vi.spyOn(logger, 'warn');
     const debug = vi.spyOn(logger, 'debug');
     const missing = join(tmpdir(), 'claude-code-monitor-missing-file.jsonl');
-    const scan = async (): Promise<SourceScan[]> => [
-      { root: tmpdir(), ok: true, error: null, files: [{ path: missing, size: 10, mtimeMs: 1 }], unreadable: [] },
+    const scan = async (): Promise<RootScan[]> => [
+      {
+        root: tmpdir(),
+        ok: true,
+        error: null,
+        files: [{ path: missing, size: 10, mtimeMs: 1 }],
+        unreadable: [],
+        client: 'claude',
+        required: true,
+      },
     ];
     const { run } = setup({ logger, notices: createNotices(), scan });
     await run();
@@ -377,8 +388,8 @@ describe('runIngestCycle', () => {
   it('warns once per unreadable entry under a source', async () => {
     const logger = createLogger('silent');
     const warn = vi.spyOn(logger, 'warn');
-    const scan = async (): Promise<SourceScan[]> => [
-      { root: tree.root, ok: true, error: null, files: [], unreadable: [tree.path('locked')] },
+    const scan = async (): Promise<RootScan[]> => [
+      { root: tree.root, ok: true, error: null, files: [], unreadable: [tree.path('locked')], client: 'claude', required: true },
     ];
     const { run } = setup({ logger, notices: createNotices(), scan });
     await run();
@@ -416,6 +427,8 @@ describe('runIngestCycle', () => {
             { path: goodFile, size: Buffer.byteLength(`${line('m1')}\n`), mtimeMs: 2 },
           ],
           unreadable: [],
+          client: 'claude',
+          required: true,
         },
       ],
     });
@@ -423,5 +436,31 @@ describe('runIngestCycle', () => {
     expect(rows()).toHaveLength(1);
     expect(status.snapshot().backfill.filesDone).toBe(2);
     good.cleanup();
+  });
+
+  it('reports a missing optional Codex root without a warning, and a missing required root with one', async () => {
+    const logger = createLogger('silent');
+    const warn = vi.spyOn(logger, 'warn');
+    tree = createTree();
+    const { db, repos } = createTestDb();
+    const status = new StatusTracker(() => Date.parse('2026-09-11T00:00:00Z'));
+    tree.write('-home-dev-alpha/s1.jsonl', [line('m1')]);
+    const base: IngestDeps = {
+      db,
+      repos,
+      roots: [claudeRoot(tree.root), codexRoot(tree.path('codex/sessions'))],
+      toLocalDay: createLocalDay('UTC'),
+      status,
+      logger,
+      now: () => Date.parse('2026-09-11T00:00:00Z'),
+    };
+    await runIngestCycle(base);
+    expect(warn).not.toHaveBeenCalled();
+    expect(status.snapshot().sources).toEqual([
+      expect.objectContaining({ path: tree.root, client: 'claude', required: true, present: true, ok: true, files: 1 }),
+      expect.objectContaining({ path: tree.path('codex/sessions'), client: 'codex', required: false, present: false, ok: false }),
+    ]);
+    await runIngestCycle({ ...base, roots: [claudeRoot(tree.path('claude-missing'))] });
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 });

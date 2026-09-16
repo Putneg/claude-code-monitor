@@ -8,6 +8,7 @@ import { createRepos, type Repos } from './db/repos.js';
 import { createApp } from './http/app.js';
 import { runIngestCycle } from './ingest/ingestor.js';
 import { createNotices } from './ingest/notices.js';
+import { sourceRoots } from './ingest/sources.js';
 import type { Logger } from './logger.js';
 import { createFetchPayload, createPricingService, PRICING_RETRY_MS, type PricingService } from './pricing/refresher.js';
 import { PRICE_SNAPSHOT } from './pricing/snapshot.js';
@@ -99,7 +100,7 @@ function startIngest(deps: IngestLoopDeps): Scheduler {
       const result = await runIngestCycle({
         db,
         repos,
-        roots: config.projectsDirs,
+        roots: sourceRoots(config),
         toLocalDay,
         status,
         logger,
@@ -187,7 +188,7 @@ export async function startService(config: Config, logger: Logger, options: Serv
   });
   const listening = await listen(app, config, logger).catch((error: unknown) => abortStart(background, error, logger));
   logger.info(
-    { port: listening.port, host: config.host, sources: config.projectsDirs, tz: config.timeZone },
+    { port: listening.port, host: config.host, sources: sourceRoots(config).map((root) => root.path), tz: config.timeZone },
     'claude-code-monitor started',
   );
   return { port: listening.port, stop: () => stopAll(background, listening.server) };

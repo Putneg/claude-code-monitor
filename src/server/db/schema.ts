@@ -182,3 +182,31 @@ FROM (
   LEFT JOIN prices p ON p.price_key = m.price_key
 ) b;
 `;
+
+/**
+ * Schema v3, Codex support:
+ * - usage gains client. Rows written before this release are Claude Code rows. usage_costed selects u.*, which SQLite
+ *   expands whenever a statement is prepared, so the view returns the new column without being recreated.
+ * - file_state gains parser_state: the JSON a stateful transcript parser needs to resume a file at its read offset.
+ * - codex_rate_limits keeps the newest Codex rate-limit reading per limit id; *_resets_at and observed_at are epoch ms.
+ */
+export const SCHEMA_V3 = `
+ALTER TABLE usage ADD COLUMN client TEXT NOT NULL DEFAULT 'claude' CHECK (client IN ('claude', 'codex'));
+
+ALTER TABLE file_state ADD COLUMN parser_state TEXT;
+
+CREATE TABLE codex_rate_limits (
+  limit_id                 TEXT PRIMARY KEY,
+  plan_type                TEXT,
+  primary_used_percent     REAL,
+  primary_window_minutes   INTEGER,
+  primary_resets_at        INTEGER,
+  secondary_used_percent   REAL,
+  secondary_window_minutes INTEGER,
+  secondary_resets_at      INTEGER,
+  credits_has              INTEGER CHECK (credits_has IN (0, 1)),
+  credits_unlimited        INTEGER CHECK (credits_unlimited IN (0, 1)),
+  credits_balance          TEXT,
+  observed_at              INTEGER NOT NULL
+);
+`;

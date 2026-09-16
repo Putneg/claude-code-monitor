@@ -1,11 +1,17 @@
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CODEX_SESSION_FOLDERS } from '../src/server/config.js';
 import { createLogger } from '../src/server/logger.js';
 import { DEFAULT_WEB_ROOT, startService } from '../src/server/service.js';
+import { writeCodexFixture } from '../tests/e2e/fixture-codex.js';
 import { E2E_NOW_MS, writeFixture } from '../tests/e2e/fixture.js';
 
-const DATA_DIR = fileURLToPath(new URL('../.e2e-data', import.meta.url));
+/** 'claude' serves the Claude Code fixture alone; 'mixed' adds a Codex home. */
+const FIXTURE = process.env.E2E_FIXTURE ?? 'claude';
+if (FIXTURE !== 'claude' && FIXTURE !== 'mixed') throw new Error(`E2E_FIXTURE must be claude or mixed, got ${FIXTURE}`);
+// One folder per fixture: both servers start at once, and each clears only its own data.
+const DATA_DIR = fileURLToPath(new URL(`../.e2e-data/${FIXTURE}`, import.meta.url));
 const PORT = Number(process.env.E2E_PORT ?? '8740');
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65_535) throw new Error(`E2E_PORT must be a TCP port, got ${process.env.E2E_PORT}`);
 
@@ -17,6 +23,9 @@ if (!existsSync(join(DEFAULT_WEB_ROOT, 'index.html'))) {
 // Playwright kills this process on Windows without a signal, so stale data is removed at start, not at exit.
 rmSync(DATA_DIR, { recursive: true, force: true });
 writeFixture(join(DATA_DIR, 'projects'));
+// Without the mixed fixture the Codex home does not exist, which is how the dashboard sees a machine without Codex.
+const codexHome = join(DATA_DIR, 'codex');
+if (FIXTURE === 'mixed') writeCodexFixture(codexHome);
 
 // The pricing URL is unreachable on purpose (the embedded snapshot is used); warn-level logs would print a stack trace on every run.
 const logger = createLogger('error');
@@ -26,6 +35,7 @@ const service = await startService(
     host: '127.0.0.1',
     allowedHosts: [],
     projectsDirs: [join(DATA_DIR, 'projects')],
+    codexRoots: CODEX_SESSION_FOLDERS.map((folder) => join(codexHome, folder)),
     dbPath: join(DATA_DIR, 'monitor.db'),
     scanIntervalMs: 60_000,
     timeZone: 'UTC',

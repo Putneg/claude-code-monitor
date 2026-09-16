@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { StatusResponse } from '../../shared/api';
   import { formatBytes } from '../lib/format';
-  import { progressBar, type EmptyKind } from '../lib/status-view';
+  import { progressBar, visibleSources, type EmptyKind } from '../lib/status-view';
 
   interface Props {
     kind: EmptyKind | 'loading' | 'error';
@@ -35,7 +35,7 @@
   {:else if kind === 'source-missing'}
     <p class="title alert">⚠ source missing</p>
     <ul>
-      {#each status?.sources ?? [] as source (source.path)}
+      {#each visibleSources(status?.sources ?? []) as source (source.path)}
         <li class:alert={!source.ok}>{source.path}{source.error === null ? '' : ` — ${source.error}`}</li>
       {/each}
     </ul>

@@ -1,5 +1,5 @@
 import type { SessionSort, SessionsResponse, SessionSummary } from '../../../shared/api.js';
-import { projectLabel } from '../../../shared/models.js';
+import { isClient, projectLabel, type Client } from '../../../shared/models.js';
 import type { Db } from '../connection.js';
 import { buildIn, buildWhere, type UsageFilter } from './filter-sql.js';
 import { SUBAGENT_COST_SQL, TOKENS_SUM_SQL } from './totals.js';
@@ -11,6 +11,7 @@ export interface SessionsOptions {
 
 interface SessionRow {
   session_id: string;
+  client: string;
   title: string | null;
   project_id: string | null;
   project_path: string | null;
@@ -40,8 +41,12 @@ function modelsBySession(db: Db, filter: UsageFilter, ids: readonly string[]): M
   return rows.reduce((acc, row) => acc.set(row.session_id, [...(acc.get(row.session_id) ?? []), row.model]), new Map<string, string[]>());
 }
 
+/** A session's rows share one client; the CHECK constraint admits only known ids. */
+const clientOf = (value: string): Client => (isClient(value) ? value : 'claude');
+
 const toSummary = (row: SessionRow, models: readonly string[]): SessionSummary => ({
   id: row.session_id,
+  client: clientOf(row.client),
   title: row.title,
   projectId: row.project_id,
   projectLabel: row.project_path === null ? null : projectLabel(row.project_path),
@@ -62,7 +67,7 @@ export function querySessions(db: Db, filter: UsageFilter, options: SessionsOpti
   ).n;
   const rows = db
     .prepare(
-      `SELECT session_id, MAX(session_title) AS title, MAX(project_id) AS project_id, MAX(project_path) AS project_path,
+      `SELECT session_id, MAX(client) AS client, MAX(session_title) AS title, MAX(project_id) AS project_id, MAX(project_path) AS project_path,
               MIN(ts) AS first_ts, MAX(ts) AS last_ts, TOTAL(${TOKENS_SUM_SQL}) AS tokens,
               TOTAL(cost) AS cost,
               ${SUBAGENT_COST_SQL} AS subagent_cost

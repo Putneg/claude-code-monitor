@@ -73,4 +73,24 @@ describe('heroView', () => {
     expect(heroView(searched, 'tok', '30d', null).rows.at(-1)).toMatchObject({ label: 'web search', rest: ' · 2 requests' });
     expect(heroView(makeOverview(), 'usd', '30d', null).rows.map((heroRow) => heroRow.label)).not.toContain('web search');
   });
+
+  it('splits the spend by client only when the range has more than one', () => {
+    const byClient = [
+      { client: 'claude' as const, label: 'claude code', color: '#FFB000', tokensTotal: 1_000, cost: 6, share: 0.75 },
+      { client: 'codex' as const, label: 'codex', color: '#10A37F', tokensTotal: 250, cost: 2, share: 0.25 },
+    ];
+    const hero = heroView(makeOverview({ byClient }), 'usd', '30d', null);
+    const labels = hero.rows.map((heroRow) => heroRow.label);
+    expect(labels.indexOf('clients')).toBe(labels.indexOf('sessions') + 1);
+    expect(hero.rows.find((heroRow) => heroRow.label === 'clients')).toEqual({
+      label: 'clients',
+      strong: '',
+      rest: 'claude code $6.00 · codex $2.00',
+      muted: false,
+    });
+    expect(heroView(makeOverview({ byClient }), 'tok', '30d', null).rows.find((heroRow) => heroRow.label === 'clients')?.rest).toBe(
+      'claude code 1k · codex 250',
+    );
+    expect(heroView(makeOverview(), 'usd', '30d', null).rows.map((heroRow) => heroRow.label)).not.toContain('clients');
+  });
 });

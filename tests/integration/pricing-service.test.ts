@@ -160,7 +160,7 @@ describe('PricingService', () => {
     const { service } = setup({ logger, fetchPayload: vi.fn(async () => tiered) });
     expect(await service.refresh()).toBe(true);
     const keys = Object.keys(tiered).slice(0, 20);
-    expect(warn).toHaveBeenCalledWith({ keys, count: 25 }, 'tiered (>200k) pricing is not supported; base rates are used');
+    expect(warn).toHaveBeenCalledWith({ keys, count: 25 }, 'tiered (long-context) pricing is not supported; base rates are used');
   });
 
   it('keeps existing prices when the price request is redirected to plain http', async () => {

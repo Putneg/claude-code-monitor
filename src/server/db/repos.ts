@@ -1,3 +1,4 @@
+import { createCodexLimitsRepo, type CodexLimitsRepo } from './codex-limits-repo.js';
 import type { Db } from './connection.js';
 import { createFileStateRepo, type FileStateRepo } from './file-state-repo.js';
 import { createMetaRepo, type MetaRepo } from './meta-repo.js';
@@ -11,6 +12,7 @@ export interface Repos {
   readonly files: FileStateRepo;
   readonly meta: MetaRepo;
   readonly prices: PriceRepo;
+  readonly codexLimits: CodexLimitsRepo;
 }
 
 export function createRepos(db: Db): Repos {
@@ -20,5 +22,6 @@ export function createRepos(db: Db): Repos {
     files: createFileStateRepo(db),
     meta: createMetaRepo(db),
     prices: createPriceRepo(db),
+    codexLimits: createCodexLimitsRepo(db),
   };
 }

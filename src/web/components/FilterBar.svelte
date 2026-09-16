@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import type { Day, ModelOption, ProjectOption } from '../../shared/api';
+  import type { ClientOption, Day, ModelOption, ProjectOption } from '../../shared/api';
   import { createDebouncer, DATE_APPLY_DELAY_MS, typedRange, type Debouncer } from '../lib/date-input';
   import type { DayRange } from '../lib/range';
-  import { isChecked, PRESETS, toggleModel, type RangePreset, type ViewSettings, type ViewState } from '../lib/view-state';
+  import { clientChoice, isChecked, PRESETS, toggleModel, type RangePreset, type ViewSettings, type ViewState } from '../lib/view-state';
   import ProjectPicker from './ProjectPicker.svelte';
 
   interface Props {
@@ -13,12 +13,14 @@
     firstDay: Day | null;
     models: readonly ModelOption[];
     projects: readonly ProjectOption[];
+    clients: readonly ClientOption[];
     onPreset: (preset: RangePreset) => void;
     onCustomRange: (from: Day, to: Day) => void;
     onSettings: (patch: Partial<ViewSettings>) => void;
   }
 
-  let { view, range, today, firstDay, models, projects, onPreset, onCustomRange, onSettings }: Props = $props();
+  let { view, range, today, firstDay, models, projects, clients, onPreset, onCustomRange, onSettings }: Props = $props();
+  const choice = $derived(clientChoice(view.clients));
 
   const modelIds = $derived(models.map((model) => model.id));
   const checkedCount = $derived(models.filter((model) => isChecked(view.models, model.id)).length);
@@ -116,6 +118,33 @@
       onkeydown={(event) => onDateKey(event, 'to')}
     />
   </div>
+
+  {#if clients.length > 1}
+    <div class="grp" role="group" aria-label="client">
+      <span class="lbl">client</span>
+      <button
+        type="button"
+        class="opt"
+        class:on={choice === 'all'}
+        aria-pressed={choice === 'all'}
+        onclick={() => onSettings({ clients: [] })}
+      >
+        all
+      </button>
+      {#each clients as client (client.id)}
+        <button
+          type="button"
+          class="opt"
+          class:on={choice === client.id}
+          aria-pressed={choice === client.id}
+          title={client.label}
+          onclick={() => onSettings({ clients: [client.id] })}
+        >
+          {client.id}
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   <div class="grp" role="group" aria-label="models">
     <span class="lbl">models</span>

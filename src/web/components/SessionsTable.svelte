@@ -43,6 +43,7 @@
             <tr>
               <td class="r dim">{row.index}</td>
               <td title={row.title}>
+                {#if row.clientTag !== null}<span class="tag" title={row.client}>{row.clientTag}</span>{/if}
                 <span class="title-text" class:muted={row.untitled}>{row.title}</span> <span class="muted">{row.shortId}</span>
               </td>
               <td class:dim={!row.unknownProject} class:muted={row.unknownProject}>{row.project}</td>
@@ -99,6 +100,14 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: bottom;
+  }
+
+  .tag {
+    margin-right: 4px;
+    padding: 0 3px;
+    border: 1px solid var(--line);
+    color: var(--dim);
+    font-size: 10.5px;
   }
 
   .barcol {

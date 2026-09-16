@@ -11,6 +11,7 @@ describe('loadConfig', () => {
       host: '127.0.0.1',
       allowedHosts: [],
       projectsDirs: [join(homedir(), '.claude', 'projects')],
+      codexRoots: [join(homedir(), '.codex', 'sessions'), join(homedir(), '.codex', 'archived_sessions')],
       dbPath: join(process.cwd(), 'data', 'monitor.db'),
       scanIntervalMs: 60_000,
       timeZone: defaultTimeZone(),
@@ -26,6 +27,7 @@ describe('loadConfig', () => {
       HOST: '0.0.0.0',
       ALLOWED_HOSTS: 'Monitor.LAN, [FE80:0:0:0:0:0:0:1] ,monitor.lan,',
       CLAUDE_PROJECTS_DIRS: '/claude/projects, ~/other ,',
+      CODEX_HOME: '~/codex-a, /codex/b',
       DB_PATH: '/data/monitor.db',
       SCAN_INTERVAL_SEC: '15',
       TZ: 'UTC',
@@ -39,6 +41,12 @@ describe('loadConfig', () => {
       host: '0.0.0.0',
       allowedHosts: ['monitor.lan', '[fe80::1]'],
       projectsDirs: [resolve('/claude/projects'), join(homedir(), 'other')],
+      codexRoots: [
+        join(homedir(), 'codex-a', 'sessions'),
+        join(homedir(), 'codex-a', 'archived_sessions'),
+        resolve('/codex/b/sessions'),
+        resolve('/codex/b/archived_sessions'),
+      ],
       dbPath: '/data/monitor.db',
       scanIntervalMs: 15_000,
       timeZone: 'UTC',
@@ -98,6 +106,28 @@ describe('loadConfig', () => {
 
   it('lists every invalid variable at once', () => {
     expect(() => loadConfig({ PORT: 'x', LOG_LEVEL: 'y' })).toThrow(/PORT.*LOG_LEVEL|LOG_LEVEL.*PORT/);
+  });
+
+  it('uses ~/.codex when CODEX_HOME is blank', () => {
+    expect(loadConfig({ CODEX_HOME: ' , ' }).codexRoots).toEqual([
+      join(homedir(), '.codex', 'sessions'),
+      join(homedir(), '.codex', 'archived_sessions'),
+    ]);
+  });
+
+  it('lists a repeated Codex home once', () => {
+    expect(loadConfig({ CODEX_HOME: '/codex, /codex' }).codexRoots).toEqual([
+      resolve('/codex/sessions'),
+      resolve('/codex/archived_sessions'),
+    ]);
+  });
+
+  it.each([
+    ['a Codex folder inside a projects directory', { CLAUDE_PROJECTS_DIRS: '/data', CODEX_HOME: '/data/codex' }],
+    ['a projects directory inside a Codex folder', { CLAUDE_PROJECTS_DIRS: '/codex/sessions/claude', CODEX_HOME: '/codex' }],
+  ])('rejects %s', (_label, env) => {
+    expect(() => loadConfig(env)).toThrow(ConfigError);
+    expect(() => loadConfig(env)).toThrow(/CODEX_HOME: .* overlaps a CLAUDE_PROJECTS_DIRS entry/);
   });
 });
 

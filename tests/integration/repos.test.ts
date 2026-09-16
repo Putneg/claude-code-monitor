@@ -10,9 +10,9 @@ const PRICES: PriceTable = {
 describe('file state repo', () => {
   it('upserts, lists, counts and removes file states', () => {
     const { repos } = createTestDb();
-    repos.files.upsert({ path: '/a.jsonl', size: 10, mtimeMs: 1.5, offset: 10, fingerprint: null });
-    repos.files.upsert({ path: '/b.jsonl', size: 20, mtimeMs: 2.25, offset: 15, fingerprint: null });
-    repos.files.upsert({ path: '/a.jsonl', size: 30, mtimeMs: 3.5, offset: 30, fingerprint: '30:0123456789abcdef' });
+    repos.files.upsert({ path: '/a.jsonl', size: 10, mtimeMs: 1.5, offset: 10, fingerprint: null, parserState: null });
+    repos.files.upsert({ path: '/b.jsonl', size: 20, mtimeMs: 2.25, offset: 15, fingerprint: null, parserState: '{"v":1}' });
+    repos.files.upsert({ path: '/a.jsonl', size: 30, mtimeMs: 3.5, offset: 30, fingerprint: '30:0123456789abcdef', parserState: null });
     expect(repos.files.count()).toBe(2);
     expect(repos.files.all().get('/a.jsonl')).toEqual({
       path: '/a.jsonl',
@@ -20,8 +20,9 @@ describe('file state repo', () => {
       mtimeMs: 3.5,
       offset: 30,
       fingerprint: '30:0123456789abcdef',
+      parserState: null,
     });
-    expect(repos.files.all().get('/b.jsonl')?.fingerprint).toBeNull();
+    expect(repos.files.all().get('/b.jsonl')).toMatchObject({ fingerprint: null, parserState: '{"v":1}' });
     repos.files.remove(['/a.jsonl']);
     repos.files.remove([]);
     expect([...repos.files.all().keys()]).toEqual(['/b.jsonl']);

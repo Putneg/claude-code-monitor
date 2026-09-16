@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CLIENT_META,
+  CLIENTS,
   FALLBACK_PALETTE,
+  MODEL_COLORS,
   OTHER_COLOR,
   TOKEN_TYPE_META,
   TOKEN_TYPE_ORDER,
+  clientMeta,
   hashString,
+  isClient,
   modelColor,
   modelLabel,
   projectLabel,
@@ -19,6 +24,9 @@ describe('modelLabel', () => {
     ['claude-sonnet-5', 'sonnet-5'],
     ['claude-3-5-sonnet-20241022', '3-5-sonnet'],
     ['some-other-model', 'some-other-model'],
+    ['gpt-4.1-2025-04-14', 'gpt-4.1-2025-04-14'],
+    ['gpt-5.6-sol', 'gpt-5.6-sol'],
+    ['codex-auto-review', 'codex-auto-review'],
   ])('%s -> %s', (id, label) => {
     expect(modelLabel(id)).toBe(label);
   });
@@ -92,5 +100,45 @@ describe('token type metadata', () => {
       expect(TOKEN_TYPE_META[key].label.length).toBeGreaterThan(0);
       expect(TOKEN_TYPE_META[key].color).toMatch(/^#[0-9A-F]{6}$/);
     });
+  });
+});
+
+describe('clients', () => {
+  it('lists Claude Code first and recognizes only known clients', () => {
+    expect(CLIENTS).toEqual(['claude', 'codex']);
+    expect(isClient('codex')).toBe(true);
+    expect(isClient('claude')).toBe(true);
+    expect(isClient('Codex')).toBe(false);
+    expect(isClient('constructor')).toBe(false);
+  });
+});
+
+describe('client metadata', () => {
+  it('labels and colors every client, and falls back for an unknown id', () => {
+    expect(CLIENT_META).toEqual({ claude: { label: 'claude code', color: '#FFB000' }, codex: { label: 'codex', color: '#10A37F' } });
+    expect(clientMeta('codex')).toEqual({ label: 'codex', color: '#10A37F' });
+    expect(clientMeta('other')).toEqual({ label: 'other', color: OTHER_COLOR });
+  });
+
+  it('gives the Codex models fixed colors', () => {
+    expect(modelColor('gpt-6-astra')).toBe('#FF79C6');
+    expect(modelColor('gpt-5.6-sol')).toBe('#2BD9A5');
+    expect(modelColor('codex-auto-review')).toBe('#B8BB26');
+  });
+
+  it('keeps client and model colors at the 3:1 contrast graphics need on the page background', () => {
+    const colors = [...CLIENTS.map((client) => CLIENT_META[client].color), ...Object.values(MODEL_COLORS)];
+    colors.forEach((color) => expect(contrast(color, '#0D0E0B')).toBeGreaterThanOrEqual(3));
+  });
+
+  it('never reuses a Claude model color or a fallback color for a Codex model', () => {
+    const codex = ['gpt-6-astra', 'gpt-5.6-sol', 'codex-auto-review'];
+    const others = [
+      ...Object.entries(MODEL_COLORS)
+        .filter(([label]) => !codex.includes(label))
+        .map(([, color]) => color),
+      ...FALLBACK_PALETTE,
+    ];
+    codex.forEach((label) => expect(others).not.toContain(MODEL_COLORS[label]));
   });
 });

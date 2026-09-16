@@ -26,11 +26,16 @@ services:
     environment:
       # Container paths and port are fixed; values in .env cannot override them.
       CLAUDE_PROJECTS_DIRS: /claude/projects
+      CODEX_HOME: /codex
       DB_PATH: /data/monitor.db
       HOST: 0.0.0.0
       PORT: '8739'
     volumes:
       - ${CLAUDE_HOME:?Set CLAUDE_HOME in .env (see .env.example)}/projects:/claude/projects:ro
+      # Codex is optional. Only its two rollout folders are mounted, so the rest of the Codex home (auth.json included)
+      # stays out of the container. Without CODEX_HOME, Docker creates empty ./.codex-none folders instead.
+      - ${CODEX_HOME:-./.codex-none}/sessions:/codex/sessions:ro
+      - ${CODEX_HOME:-./.codex-none}/archived_sessions:/codex/archived_sessions:ro
       - monitor-data:/data
 
 volumes:

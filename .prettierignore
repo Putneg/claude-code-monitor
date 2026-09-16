@@ -4,6 +4,7 @@ coverage
 .superpowers
 .claude
 .e2e-data
+.codex-none
 test-results
 playwright-report
 data

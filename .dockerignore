@@ -11,5 +11,6 @@ tests
 !THIRD_PARTY_NOTICES.md
 .env
 .e2e-data
+.codex-none
 playwright-report
 test-results

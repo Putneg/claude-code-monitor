@@ -1,6 +1,7 @@
-import type { Bucket, Day, SessionSort, Stack } from '../../shared/api.js';
+import type { Bucket, Client, Day, SessionSort, Stack } from '../../shared/api.js';
 import { daysInclusive, isValidDay } from '../../shared/days.js';
 import { MAX_LIST_ITEM_LENGTH, MAX_LIST_ITEMS, MAX_QUERY_DAY, MAX_RANGE_DAYS, MIN_QUERY_DAY } from '../../shared/limits.js';
+import { CLIENTS, isClient } from '../../shared/models.js';
 
 export type RangePreset = 'today' | '7d' | '30d' | '90d' | 'all';
 export type Unit = 'usd' | 'tok';
@@ -8,7 +9,7 @@ export type Unit = 'usd' | 'tok';
 export const PRESETS: readonly RangePreset[] = ['today', '7d', '30d', '90d', 'all'];
 export const DEFAULT_PRESET: RangePreset = '30d';
 const UNITS: readonly Unit[] = ['usd', 'tok'];
-export const STACKS: readonly Stack[] = ['model', 'type', 'project'];
+export const STACKS: readonly Stack[] = ['model', 'type', 'project', 'client'];
 const BUCKETS: readonly Bucket[] = ['day', 'hour'];
 export const SORTS: readonly SessionSort[] = ['cost', 'recent'];
 
@@ -22,6 +23,8 @@ export interface ViewState {
   readonly models: readonly string[];
   /** Empty means all projects. */
   readonly projects: readonly string[];
+  /** Empty means all clients. */
+  readonly clients: readonly Client[];
   readonly unit: Unit;
   readonly stack: Stack;
   /** null lets the API choose (hour buckets for ranges up to 2 days). */
@@ -30,7 +33,7 @@ export interface ViewState {
   readonly sort: SessionSort;
 }
 
-export type ViewSettings = Pick<ViewState, 'models' | 'projects' | 'unit' | 'stack' | 'bucket' | 'cumulative' | 'sort'>;
+export type ViewSettings = Pick<ViewState, 'models' | 'projects' | 'clients' | 'unit' | 'stack' | 'bucket' | 'cumulative' | 'sort'>;
 
 export const DEFAULT_VIEW: ViewState = {
   range: DEFAULT_PRESET,
@@ -38,6 +41,7 @@ export const DEFAULT_VIEW: ViewState = {
   to: null,
   models: [],
   projects: [],
+  clients: [],
   unit: 'usd',
   stack: 'model',
   bucket: null,
@@ -58,6 +62,12 @@ function parseList(value: string | null): string[] {
   return [...new Set(items)].slice(0, MAX_LIST_ITEMS);
 }
 
+/** Known clients only; naming every client is the same as naming none. */
+function parseClients(value: string | null): Client[] {
+  const clients = parseList(value).filter(isClient);
+  return clients.length === CLIENTS.length ? [] : clients;
+}
+
 /** A valid day that the API also accepts. */
 const isQueryDay = (value: string): boolean => isValidDay(value) && value >= MIN_QUERY_DAY && value <= MAX_QUERY_DAY;
 
@@ -76,6 +86,7 @@ export function parseViewState(search: string): ViewState {
     to: custom?.to ?? null,
     models: parseList(params.get('models')),
     projects: parseList(params.get('projects')),
+    clients: parseClients(params.get('clients')),
     unit: pick(params.get('unit'), UNITS, DEFAULT_VIEW.unit),
     stack: pick(params.get('stack'), STACKS, DEFAULT_VIEW.stack),
     bucket: BUCKETS.find((bucket) => bucket === params.get('bucket')) ?? null,
@@ -98,6 +109,7 @@ export function serializeViewState(view: ViewState): string {
     ['to', custom ? view.to : null],
     ['models', view.models.length > 0 ? encodeList(view.models) : null],
     ['projects', view.projects.length > 0 ? encodeList(view.projects) : null],
+    ['clients', view.clients.length > 0 ? view.clients.join(',') : null],
     ['unit', view.unit === DEFAULT_VIEW.unit ? null : view.unit],
     ['stack', view.stack === DEFAULT_VIEW.stack ? null : view.stack],
     ['bucket', view.bucket],
@@ -142,4 +154,28 @@ export function toggleModel(selected: readonly string[], all: readonly string[],
 /** Toggles a project in the filter; an empty list means all projects. */
 export function toggleProject(selected: readonly string[], id: string): readonly string[] {
   return selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id];
+}
+
+export type ClientChoice = Client | 'all';
+
+/** The pressed button of the client switch: the one selected client, or all. */
+export function clientChoice(clients: readonly Client[]): ClientChoice {
+  const [only] = clients;
+  return clients.length === 1 && only !== undefined ? only : 'all';
+}
+
+/** Timeline stack options; splitting by client needs data from more than one client. */
+export function visibleStacks(available: readonly Client[]): readonly Stack[] {
+  return available.length > 1 ? STACKS : STACKS.filter((stack) => stack !== 'client');
+}
+
+/**
+ * The view the page queries and draws. Without data from two clients the client switch and the client stack are hidden,
+ * so a client selection or client stack from the URL is set aside, as is a selected client that has no data.
+ */
+export function effectiveView(view: ViewState, available: readonly Client[]): ViewState {
+  const multi = available.length > 1;
+  const clients = multi ? view.clients.filter((client) => available.includes(client)) : [];
+  const stack = view.stack === 'client' && !multi ? 'model' : view.stack;
+  return clients.length === view.clients.length && stack === view.stack ? view : { ...view, clients, stack };
 }

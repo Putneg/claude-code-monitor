@@ -14,9 +14,10 @@ describe('parseQuery', () => {
       from: '2026-09-01',
       models: ['a', 'b'],
       projects: [],
+      clients: [],
       stack: 'model',
     });
-    expect(parseQuery(sessionsQuerySchema, {})).toEqual({ models: [], projects: [], sort: 'cost', limit: 50 });
+    expect(parseQuery(sessionsQuerySchema, {})).toEqual({ models: [], projects: [], clients: [], sort: 'cost', limit: 50 });
   });
 
   it('accepts days from 2000-01-01 to 2999-12-31', () => {
@@ -40,26 +41,52 @@ describe('parseQuery', () => {
       expect(Object.keys((error as QueryError).details as object).sort()).toEqual(['from', 'limit', 'sort']);
     }
   });
+
+  it('reads known clients once each, and the client stack', () => {
+    expect(parseQuery(overviewQuerySchema, { clients: 'codex, codex,claude', stack: 'client' })).toMatchObject({
+      clients: ['codex', 'claude'],
+      stack: 'client',
+    });
+  });
+
+  it('rejects an unknown client', () => {
+    try {
+      parseQuery(sessionsQuerySchema, { clients: 'claude,other' });
+      expect.unreachable('expected a QueryError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(QueryError);
+      expect(Object.keys((error as QueryError).details as object)).toEqual(['clients']);
+    }
+  });
 });
 
 describe('resolveFilter', () => {
   it('defaults to the last 30 days ending today', () => {
-    expect(resolveFilter({ models: [], projects: [] }, '2026-09-11')).toEqual({
+    expect(resolveFilter({ models: [], projects: [], clients: [] }, '2026-09-11')).toEqual({
       from: '2026-08-13',
       to: '2026-09-11',
       models: [],
       projects: [],
+      clients: [],
     });
   });
 
   it('keeps an explicit range and rejects inverted or huge ranges', () => {
-    expect(resolveFilter({ from: '2026-09-01', to: '2026-09-02', models: ['m'], projects: [] }, '2026-09-11')).toMatchObject({
+    expect(resolveFilter({ from: '2026-09-01', to: '2026-09-02', models: ['m'], projects: [], clients: [] }, '2026-09-11')).toMatchObject({
       from: '2026-09-01',
       to: '2026-09-02',
       models: ['m'],
     });
-    expect(() => resolveFilter({ from: '2026-09-03', to: '2026-09-02', models: [], projects: [] }, '2026-09-11')).toThrow(QueryError);
-    expect(() => resolveFilter({ from: '2000-01-01', to: '2026-09-02', models: [], projects: [] }, '2026-09-11')).toThrow(QueryError);
+    expect(() => resolveFilter({ from: '2026-09-03', to: '2026-09-02', models: [], projects: [], clients: [] }, '2026-09-11')).toThrow(
+      QueryError,
+    );
+    expect(() => resolveFilter({ from: '2000-01-01', to: '2026-09-02', models: [], projects: [], clients: [] }, '2026-09-11')).toThrow(
+      QueryError,
+    );
+  });
+
+  it('passes the clients through', () => {
+    expect(resolveFilter({ models: [], projects: [], clients: ['codex'] }, '2026-09-11')).toMatchObject({ clients: ['codex'] });
   });
 });
 

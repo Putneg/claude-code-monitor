@@ -1,10 +1,13 @@
-import type { ProjectBreakdown, ProjectOption, SessionSummary } from '../../shared/api.js';
+import type { Client, ProjectBreakdown, ProjectOption, SessionSummary } from '../../shared/api.js';
 import { modelColor, modelLabel } from '../../shared/models.js';
 import { EM_DASH, formatDateTime, formatPercent, formatStamp, formatTimeOfDay, formatTokens, formatUsd, zonedDay } from './format.js';
 
 export const TOP_PROJECTS = 8;
 export const UNTITLED = '(untitled)';
 export const UNKNOWN_PROJECT = '(unknown)';
+
+/** A short marker in the sessions table for clients other than Claude Code. */
+export const CLIENT_TAGS: Readonly<Record<Client, string | null>> = { claude: null, codex: 'cx' };
 
 export interface ProjectRow {
   readonly id: string;
@@ -55,6 +58,8 @@ export interface SessionModel {
 export interface SessionRow {
   readonly index: number;
   readonly id: string;
+  readonly client: Client;
+  readonly clientTag: string | null;
   readonly shortId: string;
   readonly title: string;
   readonly untitled: boolean;
@@ -83,6 +88,8 @@ export function sessionRows(sessions: readonly SessionSummary[], timeZone: strin
     return {
       index: index + 1,
       id: session.id,
+      client: session.client,
+      clientTag: CLIENT_TAGS[session.client],
       shortId: session.id.slice(0, 8),
       title: title.length > 0 ? title : UNTITLED,
       untitled: title.length === 0,

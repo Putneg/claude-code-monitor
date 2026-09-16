@@ -35,6 +35,7 @@ describe('matchProjects', () => {
 describe('sessionRows', () => {
   const titled: SessionSummary = {
     id: 'a1b2c3d4e5f6',
+    client: 'claude',
     title: 'Refactor parser',
     projectId: 'p1',
     projectLabel: 'dev/alpha',
@@ -47,6 +48,7 @@ describe('sessionRows', () => {
   };
   const bare: SessionSummary = {
     id: 'ffff0000aaaa',
+    client: 'codex',
     title: null,
     projectId: null,
     projectLabel: null,
@@ -62,6 +64,8 @@ describe('sessionRows', () => {
     expect(sessionRows([titled, bare], 'UTC')[0]).toEqual({
       index: 1,
       id: 'a1b2c3d4e5f6',
+      client: 'claude',
+      clientTag: null,
       shortId: 'a1b2c3d4',
       title: 'Refactor parser',
       untitled: false,
@@ -100,5 +104,12 @@ describe('sessionRows', () => {
       barPct: 25,
     });
     expect(sessionRows([{ ...titled, title: '   ' }], 'UTC')[0]).toMatchObject({ title: '(untitled)', untitled: true });
+  });
+
+  it('tags Codex sessions', () => {
+    expect(sessionRows([titled, bare], 'UTC').map((row) => [row.client, row.clientTag])).toEqual([
+      ['claude', null],
+      ['codex', 'cx'],
+    ]);
   });
 });

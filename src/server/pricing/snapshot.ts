@@ -2,8 +2,16 @@
 import type { PriceSnapshot } from './types.js';
 
 export const PRICE_SNAPSHOT: PriceSnapshot = {
-  "fetchedAt": "2026-09-11T17:02:22.936Z",
+  "fetchedAt": "2026-09-16T11:47:20.076Z",
   "prices": {
+    "chatgpt-4o-latest": {
+      "input": 0.000005,
+      "output": 0.000015,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 0.000005,
+      "fastMultiplier": 1
+    },
     "claude-haiku-4-5-20251001": {
       "input": 0.000001,
       "output": 0.000005,
@@ -204,6 +212,958 @@ export const PRICE_SNAPSHOT: PriceSnapshot = {
       "cacheRead": 3e-7,
       "fastMultiplier": 1
     },
+    "codex-mini-latest": {
+      "input": 0.0000015,
+      "output": 0.000006,
+      "cacheWrite5m": 0.0000015,
+      "cacheWrite1h": 0.0000015,
+      "cacheRead": 3.75e-7,
+      "fastMultiplier": 1
+    },
+    "computer-use-preview": {
+      "input": 0.000003,
+      "output": 0.000012,
+      "cacheWrite5m": 0.000003,
+      "cacheWrite1h": 0.000003,
+      "cacheRead": 0.000003,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-3.5-turbo": {
+      "input": 0.000003,
+      "output": 0.000006,
+      "cacheWrite5m": 0.000003,
+      "cacheWrite1h": 0.000003,
+      "cacheRead": 0.000003,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-3.5-turbo-0125": {
+      "input": 0.000003,
+      "output": 0.000006,
+      "cacheWrite5m": 0.000003,
+      "cacheWrite1h": 0.000003,
+      "cacheRead": 0.000003,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-3.5-turbo-0613": {
+      "input": 0.000003,
+      "output": 0.000006,
+      "cacheWrite5m": 0.000003,
+      "cacheWrite1h": 0.000003,
+      "cacheRead": 0.000003,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-3.5-turbo-1106": {
+      "input": 0.000003,
+      "output": 0.000006,
+      "cacheWrite5m": 0.000003,
+      "cacheWrite1h": 0.000003,
+      "cacheRead": 0.000003,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-4-0613": {
+      "input": 0.00003,
+      "output": 0.00006,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-4o-2024-08-06": {
+      "input": 0.00000375,
+      "output": 0.000015,
+      "cacheWrite5m": 0.00000375,
+      "cacheWrite1h": 0.00000375,
+      "cacheRead": 0.000001875,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-4o-2024-11-20": {
+      "input": 0.00000375,
+      "output": 0.000015,
+      "cacheWrite5m": 0.000001875,
+      "cacheWrite1h": 0.000001875,
+      "cacheRead": 0.00000375,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-4o-mini-2024-07-18": {
+      "input": 3e-7,
+      "output": 0.0000012,
+      "cacheWrite5m": 3e-7,
+      "cacheWrite1h": 3e-7,
+      "cacheRead": 1.5e-7,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-4.1-2025-04-14": {
+      "input": 0.000003,
+      "output": 0.000012,
+      "cacheWrite5m": 0.000003,
+      "cacheWrite1h": 0.000003,
+      "cacheRead": 7.5e-7,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-4.1-mini-2025-04-14": {
+      "input": 8e-7,
+      "output": 0.0000032,
+      "cacheWrite5m": 8e-7,
+      "cacheWrite1h": 8e-7,
+      "cacheRead": 2e-7,
+      "fastMultiplier": 1
+    },
+    "ft:gpt-4.1-nano-2025-04-14": {
+      "input": 2e-7,
+      "output": 8e-7,
+      "cacheWrite5m": 2e-7,
+      "cacheWrite1h": 2e-7,
+      "cacheRead": 5e-8,
+      "fastMultiplier": 1
+    },
+    "ft:o4-mini-2025-04-16": {
+      "input": 0.000004,
+      "output": 0.000016,
+      "cacheWrite5m": 0.000004,
+      "cacheWrite1h": 0.000004,
+      "cacheRead": 0.000001,
+      "fastMultiplier": 1
+    },
+    "gpt-3.5-turbo": {
+      "input": 5e-7,
+      "output": 0.0000015,
+      "cacheWrite5m": 5e-7,
+      "cacheWrite1h": 5e-7,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-3.5-turbo-0125": {
+      "input": 5e-7,
+      "output": 0.0000015,
+      "cacheWrite5m": 5e-7,
+      "cacheWrite1h": 5e-7,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-3.5-turbo-1106": {
+      "input": 0.000001,
+      "output": 0.000002,
+      "cacheWrite5m": 0.000001,
+      "cacheWrite1h": 0.000001,
+      "cacheRead": 0.000001,
+      "fastMultiplier": 1
+    },
+    "gpt-3.5-turbo-16k": {
+      "input": 0.000003,
+      "output": 0.000004,
+      "cacheWrite5m": 0.000003,
+      "cacheWrite1h": 0.000003,
+      "cacheRead": 0.000003,
+      "fastMultiplier": 1
+    },
+    "gpt-4": {
+      "input": 0.00003,
+      "output": 0.00006,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "gpt-4-0125-preview": {
+      "input": 0.00001,
+      "output": 0.00003,
+      "cacheWrite5m": 0.00001,
+      "cacheWrite1h": 0.00001,
+      "cacheRead": 0.00001,
+      "fastMultiplier": 1
+    },
+    "gpt-4-0314": {
+      "input": 0.00003,
+      "output": 0.00006,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "gpt-4-0613": {
+      "input": 0.00003,
+      "output": 0.00006,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "gpt-4-1106-preview": {
+      "input": 0.00001,
+      "output": 0.00003,
+      "cacheWrite5m": 0.00001,
+      "cacheWrite1h": 0.00001,
+      "cacheRead": 0.00001,
+      "fastMultiplier": 1
+    },
+    "gpt-4-turbo": {
+      "input": 0.00001,
+      "output": 0.00003,
+      "cacheWrite5m": 0.00001,
+      "cacheWrite1h": 0.00001,
+      "cacheRead": 0.00001,
+      "fastMultiplier": 1
+    },
+    "gpt-4-turbo-2024-04-09": {
+      "input": 0.00001,
+      "output": 0.00003,
+      "cacheWrite5m": 0.00001,
+      "cacheWrite1h": 0.00001,
+      "cacheRead": 0.00001,
+      "fastMultiplier": 1
+    },
+    "gpt-4-turbo-preview": {
+      "input": 0.00001,
+      "output": 0.00003,
+      "cacheWrite5m": 0.00001,
+      "cacheWrite1h": 0.00001,
+      "cacheRead": 0.00001,
+      "fastMultiplier": 1
+    },
+    "gpt-4.1": {
+      "input": 0.000002,
+      "output": 0.000008,
+      "cacheWrite5m": 0.000002,
+      "cacheWrite1h": 0.000002,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-4.1-2025-04-14": {
+      "input": 0.000002,
+      "output": 0.000008,
+      "cacheWrite5m": 0.000002,
+      "cacheWrite1h": 0.000002,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-4.1-mini": {
+      "input": 4e-7,
+      "output": 0.0000016,
+      "cacheWrite5m": 4e-7,
+      "cacheWrite1h": 4e-7,
+      "cacheRead": 1e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-4.1-mini-2025-04-14": {
+      "input": 4e-7,
+      "output": 0.0000016,
+      "cacheWrite5m": 4e-7,
+      "cacheWrite1h": 4e-7,
+      "cacheRead": 1e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-4.1-nano": {
+      "input": 1e-7,
+      "output": 4e-7,
+      "cacheWrite5m": 1e-7,
+      "cacheWrite1h": 1e-7,
+      "cacheRead": 2.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-4.1-nano-2025-04-14": {
+      "input": 1e-7,
+      "output": 4e-7,
+      "cacheWrite5m": 1e-7,
+      "cacheWrite1h": 1e-7,
+      "cacheRead": 2.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-4o": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-2024-05-13": {
+      "input": 0.000005,
+      "output": 0.000015,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 0.000005,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-2024-08-06": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-2024-11-20": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-audio-preview": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-audio-preview-2024-12-17": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-audio-preview-2025-06-03": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "gpt-audio": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "gpt-audio-1.5": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "gpt-audio-2025-08-28": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "gpt-audio-mini": {
+      "input": 6e-7,
+      "output": 0.0000024,
+      "cacheWrite5m": 6e-7,
+      "cacheWrite1h": 6e-7,
+      "cacheRead": 6e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-audio-mini-2025-10-06": {
+      "input": 6e-7,
+      "output": 0.0000024,
+      "cacheWrite5m": 6e-7,
+      "cacheWrite1h": 6e-7,
+      "cacheRead": 6e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-audio-mini-2025-12-15": {
+      "input": 6e-7,
+      "output": 0.0000024,
+      "cacheWrite5m": 6e-7,
+      "cacheWrite1h": 6e-7,
+      "cacheRead": 6e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-mini": {
+      "input": 1.5e-7,
+      "output": 6e-7,
+      "cacheWrite5m": 1.5e-7,
+      "cacheWrite1h": 1.5e-7,
+      "cacheRead": 7.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-mini-2024-07-18": {
+      "input": 1.5e-7,
+      "output": 6e-7,
+      "cacheWrite5m": 1.5e-7,
+      "cacheWrite1h": 1.5e-7,
+      "cacheRead": 7.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-mini-audio-preview": {
+      "input": 1.5e-7,
+      "output": 6e-7,
+      "cacheWrite5m": 1.5e-7,
+      "cacheWrite1h": 1.5e-7,
+      "cacheRead": 1.5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-mini-audio-preview-2024-12-17": {
+      "input": 1.5e-7,
+      "output": 6e-7,
+      "cacheWrite5m": 1.5e-7,
+      "cacheWrite1h": 1.5e-7,
+      "cacheRead": 1.5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-mini-search-preview": {
+      "input": 1.5e-7,
+      "output": 6e-7,
+      "cacheWrite5m": 1.5e-7,
+      "cacheWrite1h": 1.5e-7,
+      "cacheRead": 7.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-mini-search-preview-2025-03-11": {
+      "input": 1.5e-7,
+      "output": 6e-7,
+      "cacheWrite5m": 1.5e-7,
+      "cacheWrite1h": 1.5e-7,
+      "cacheRead": 7.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-search-preview": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "gpt-4o-search-preview-2025-03-11": {
+      "input": 0.0000025,
+      "output": 0.00001,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "gpt-5": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.1": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.1-2025-11-13": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.1-chat-latest": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.2": {
+      "input": 0.00000175,
+      "output": 0.000014,
+      "cacheWrite5m": 0.00000175,
+      "cacheWrite1h": 0.00000175,
+      "cacheRead": 1.75e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.2-2025-12-11": {
+      "input": 0.00000175,
+      "output": 0.000014,
+      "cacheWrite5m": 0.00000175,
+      "cacheWrite1h": 0.00000175,
+      "cacheRead": 1.75e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.2-chat-latest": {
+      "input": 0.00000175,
+      "output": 0.000014,
+      "cacheWrite5m": 0.00000175,
+      "cacheWrite1h": 0.00000175,
+      "cacheRead": 1.75e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.3-chat-latest": {
+      "input": 0.00000175,
+      "output": 0.000014,
+      "cacheWrite5m": 0.00000175,
+      "cacheWrite1h": 0.00000175,
+      "cacheRead": 1.75e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.2-pro": {
+      "input": 0.000021,
+      "output": 0.000168,
+      "cacheWrite5m": 0.000021,
+      "cacheWrite1h": 0.000021,
+      "cacheRead": 0.000021,
+      "fastMultiplier": 1
+    },
+    "gpt-5.2-pro-2025-12-11": {
+      "input": 0.000021,
+      "output": 0.000168,
+      "cacheWrite5m": 0.000021,
+      "cacheWrite1h": 0.000021,
+      "cacheRead": 0.000021,
+      "fastMultiplier": 1
+    },
+    "gpt-6-astra": {
+      "input": 0.00001,
+      "output": 0.00005,
+      "cacheWrite5m": 0.0000125,
+      "cacheWrite1h": 0.0000125,
+      "cacheRead": 0.000001,
+      "fastMultiplier": 1
+    },
+    "gpt-5.6": {
+      "input": 0.000004,
+      "output": 0.00002,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 4e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.6-sol": {
+      "input": 0.000004,
+      "output": 0.00002,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 4e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.6-terra": {
+      "input": 0.000002,
+      "output": 0.000012,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 2e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.6-luna": {
+      "input": 2e-7,
+      "output": 0.0000012,
+      "cacheWrite5m": 2.5e-7,
+      "cacheWrite1h": 2.5e-7,
+      "cacheRead": 2e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5.6-cyber": {
+      "input": 0.0000125,
+      "output": 0.000075,
+      "cacheWrite5m": 0.000015625,
+      "cacheWrite1h": 0.000015625,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "daybreak-red-latest": {
+      "input": 0.0000125,
+      "output": 0.000075,
+      "cacheWrite5m": 0.000015625,
+      "cacheWrite1h": 0.000015625,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "gpt-daybreak-red-latest": {
+      "input": 0.0000125,
+      "output": 0.000075,
+      "cacheWrite5m": 0.000015625,
+      "cacheWrite1h": 0.000015625,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "daybreak-blue-latest": {
+      "input": 0.000004,
+      "output": 0.00002,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 4e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-daybreak-blue-latest": {
+      "input": 0.000004,
+      "output": 0.00002,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 4e-7,
+      "fastMultiplier": 1
+    },
+    "chat-latest": {
+      "input": 0.000005,
+      "output": 0.00003,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.5": {
+      "input": 0.000005,
+      "output": 0.00003,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.5-2026-04-23": {
+      "input": 0.000005,
+      "output": 0.00003,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.5-pro": {
+      "input": 0.00003,
+      "output": 0.00018,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "gpt-5.5-pro-2026-04-23": {
+      "input": 0.00003,
+      "output": 0.00018,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4": {
+      "input": 0.0000025,
+      "output": 0.000015,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 2.5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4-2026-03-05": {
+      "input": 0.0000025,
+      "output": 0.000015,
+      "cacheWrite5m": 0.0000025,
+      "cacheWrite1h": 0.0000025,
+      "cacheRead": 2.5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4-pro": {
+      "input": 0.00003,
+      "output": 0.00018,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4-pro-2026-03-05": {
+      "input": 0.00003,
+      "output": 0.00018,
+      "cacheWrite5m": 0.00003,
+      "cacheWrite1h": 0.00003,
+      "cacheRead": 0.00003,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4-mini": {
+      "input": 7.5e-7,
+      "output": 0.0000045,
+      "cacheWrite5m": 7.5e-7,
+      "cacheWrite1h": 7.5e-7,
+      "cacheRead": 7.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4-mini-2026-03-17": {
+      "input": 7.5e-7,
+      "output": 0.0000045,
+      "cacheWrite5m": 7.5e-7,
+      "cacheWrite1h": 7.5e-7,
+      "cacheRead": 7.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4-nano": {
+      "input": 2e-7,
+      "output": 0.00000125,
+      "cacheWrite5m": 2e-7,
+      "cacheWrite1h": 2e-7,
+      "cacheRead": 2e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5.4-nano-2026-03-17": {
+      "input": 2e-7,
+      "output": 0.00000125,
+      "cacheWrite5m": 2e-7,
+      "cacheWrite1h": 2e-7,
+      "cacheRead": 2e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5-pro": {
+      "input": 0.000015,
+      "output": 0.00012,
+      "cacheWrite5m": 0.000015,
+      "cacheWrite1h": 0.000015,
+      "cacheRead": 0.000015,
+      "fastMultiplier": 1
+    },
+    "gpt-5-pro-2025-10-06": {
+      "input": 0.000015,
+      "output": 0.00012,
+      "cacheWrite5m": 0.000015,
+      "cacheWrite1h": 0.000015,
+      "cacheRead": 0.000015,
+      "fastMultiplier": 1
+    },
+    "gpt-5-2025-08-07": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5-chat": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5-chat-latest": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5-codex": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.1-codex": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.1-codex-max": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.1-codex-mini": {
+      "input": 2.5e-7,
+      "output": 0.000002,
+      "cacheWrite5m": 2.5e-7,
+      "cacheWrite1h": 2.5e-7,
+      "cacheRead": 2.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5.2-codex": {
+      "input": 0.00000175,
+      "output": 0.000014,
+      "cacheWrite5m": 0.00000175,
+      "cacheWrite1h": 0.00000175,
+      "cacheRead": 1.75e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5.3-codex": {
+      "input": 0.00000175,
+      "output": 0.000014,
+      "cacheWrite5m": 0.00000175,
+      "cacheWrite1h": 0.00000175,
+      "cacheRead": 1.75e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5-mini": {
+      "input": 2.5e-7,
+      "output": 0.000002,
+      "cacheWrite5m": 2.5e-7,
+      "cacheWrite1h": 2.5e-7,
+      "cacheRead": 2.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5-mini-2025-08-07": {
+      "input": 2.5e-7,
+      "output": 0.000002,
+      "cacheWrite5m": 2.5e-7,
+      "cacheWrite1h": 2.5e-7,
+      "cacheRead": 2.5e-8,
+      "fastMultiplier": 1
+    },
+    "gpt-5-nano": {
+      "input": 5e-8,
+      "output": 4e-7,
+      "cacheWrite5m": 5e-8,
+      "cacheWrite1h": 5e-8,
+      "cacheRead": 5e-9,
+      "fastMultiplier": 1
+    },
+    "gpt-5-nano-2025-08-07": {
+      "input": 5e-8,
+      "output": 4e-7,
+      "cacheWrite5m": 5e-8,
+      "cacheWrite1h": 5e-8,
+      "cacheRead": 5e-9,
+      "fastMultiplier": 1
+    },
+    "o1": {
+      "input": 0.000015,
+      "output": 0.00006,
+      "cacheWrite5m": 0.000015,
+      "cacheWrite1h": 0.000015,
+      "cacheRead": 0.0000075,
+      "fastMultiplier": 1
+    },
+    "o1-2024-12-17": {
+      "input": 0.000015,
+      "output": 0.00006,
+      "cacheWrite5m": 0.000015,
+      "cacheWrite1h": 0.000015,
+      "cacheRead": 0.0000075,
+      "fastMultiplier": 1
+    },
+    "o1-pro": {
+      "input": 0.00015,
+      "output": 0.0006,
+      "cacheWrite5m": 0.00015,
+      "cacheWrite1h": 0.00015,
+      "cacheRead": 0.00015,
+      "fastMultiplier": 1
+    },
+    "o1-pro-2025-03-19": {
+      "input": 0.00015,
+      "output": 0.0006,
+      "cacheWrite5m": 0.00015,
+      "cacheWrite1h": 0.00015,
+      "cacheRead": 0.00015,
+      "fastMultiplier": 1
+    },
+    "o3": {
+      "input": 0.000002,
+      "output": 0.000008,
+      "cacheWrite5m": 0.000002,
+      "cacheWrite1h": 0.000002,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "o3-2025-04-16": {
+      "input": 0.000002,
+      "output": 0.000008,
+      "cacheWrite5m": 0.000002,
+      "cacheWrite1h": 0.000002,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "o3-deep-research": {
+      "input": 0.00001,
+      "output": 0.00004,
+      "cacheWrite5m": 0.00001,
+      "cacheWrite1h": 0.00001,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "o3-deep-research-2025-06-26": {
+      "input": 0.00001,
+      "output": 0.00004,
+      "cacheWrite5m": 0.00001,
+      "cacheWrite1h": 0.00001,
+      "cacheRead": 0.0000025,
+      "fastMultiplier": 1
+    },
+    "o3-mini": {
+      "input": 0.0000011,
+      "output": 0.0000044,
+      "cacheWrite5m": 0.0000011,
+      "cacheWrite1h": 0.0000011,
+      "cacheRead": 5.5e-7,
+      "fastMultiplier": 1
+    },
+    "o3-mini-2025-01-31": {
+      "input": 0.0000011,
+      "output": 0.0000044,
+      "cacheWrite5m": 0.0000011,
+      "cacheWrite1h": 0.0000011,
+      "cacheRead": 5.5e-7,
+      "fastMultiplier": 1
+    },
+    "o3-pro": {
+      "input": 0.00002,
+      "output": 0.00008,
+      "cacheWrite5m": 0.00002,
+      "cacheWrite1h": 0.00002,
+      "cacheRead": 0.00002,
+      "fastMultiplier": 1
+    },
+    "o3-pro-2025-06-10": {
+      "input": 0.00002,
+      "output": 0.00008,
+      "cacheWrite5m": 0.00002,
+      "cacheWrite1h": 0.00002,
+      "cacheRead": 0.00002,
+      "fastMultiplier": 1
+    },
+    "o4-mini": {
+      "input": 0.0000011,
+      "output": 0.0000044,
+      "cacheWrite5m": 0.0000011,
+      "cacheWrite1h": 0.0000011,
+      "cacheRead": 2.75e-7,
+      "fastMultiplier": 1
+    },
+    "o4-mini-2025-04-16": {
+      "input": 0.0000011,
+      "output": 0.0000044,
+      "cacheWrite5m": 0.0000011,
+      "cacheWrite1h": 0.0000011,
+      "cacheRead": 2.75e-7,
+      "fastMultiplier": 1
+    },
+    "o4-mini-deep-research": {
+      "input": 0.000002,
+      "output": 0.000008,
+      "cacheWrite5m": 0.000002,
+      "cacheWrite1h": 0.000002,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "o4-mini-deep-research-2025-06-26": {
+      "input": 0.000002,
+      "output": 0.000008,
+      "cacheWrite5m": 0.000002,
+      "cacheWrite1h": 0.000002,
+      "cacheRead": 5e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5-search-api": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
+    "gpt-5-search-api-2025-10-14": {
+      "input": 0.00000125,
+      "output": 0.00001,
+      "cacheWrite5m": 0.00000125,
+      "cacheWrite1h": 0.00000125,
+      "cacheRead": 1.25e-7,
+      "fastMultiplier": 1
+    },
     "claude-mythos-5": {
       "input": 0.00001,
       "output": 0.00005,
@@ -226,6 +1186,22 @@ export const PRICE_SNAPSHOT: PriceSnapshot = {
       "cacheWrite5m": 0.0000125,
       "cacheWrite1h": 0.00002,
       "cacheRead": 0.000001,
+      "fastMultiplier": 1
+    },
+    "gpt-5.5-cyber": {
+      "input": 0.0000125,
+      "output": 0.000075,
+      "cacheWrite5m": 0.0000125,
+      "cacheWrite1h": 0.0000125,
+      "cacheRead": 0.00000125,
+      "fastMultiplier": 1
+    },
+    "gpt-rosalind-research": {
+      "input": 0.000005,
+      "output": 0.000025,
+      "cacheWrite5m": 0.000005,
+      "cacheWrite1h": 0.000005,
+      "cacheRead": 5e-7,
       "fastMultiplier": 1
     }
   }

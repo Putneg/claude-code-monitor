@@ -30,6 +30,7 @@ describe('querySessions', () => {
       tokensTotal: 14_300,
       cost: expect.closeTo(0.072625, 10),
       subagentCost: expect.closeTo(0.01, 10),
+      client: 'claude',
     });
     expect(result.sessions[2]).toMatchObject({ id: 'orphan-1', title: null, projectId: null, projectLabel: null });
   });
@@ -87,6 +88,7 @@ describe('queryFilters', () => {
         { id: projectIdFor(ALPHA), path: ALPHA, label: 'dev/alpha' },
         { id: projectIdFor(BETA), path: BETA, label: 'dev/beta' },
       ],
+      clients: [{ id: 'claude', label: 'claude code', color: '#FFB000' }],
       bounds: { firstDay: '2026-09-09', lastDay: '2026-09-11' },
     });
   });

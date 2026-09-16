@@ -18,9 +18,11 @@ describe('buildWhere', () => {
       sql: 'local_day BETWEEN @from AND @to',
       params: { from: '2026-09-01', to: '2026-09-02' },
     });
-    const where = buildWhere(range('2026-09-01', '2026-09-02', { models: ['a', 'b'], projects: ['p'] }), 'c');
-    expect(where.sql).toBe('c.local_day BETWEEN @from AND @to AND c.model IN (@model0, @model1) AND c.project_id IN (@project0)');
-    expect(where.params).toEqual({ from: '2026-09-01', to: '2026-09-02', model0: 'a', model1: 'b', project0: 'p' });
+    const where = buildWhere(range('2026-09-01', '2026-09-02', { models: ['a', 'b'], projects: ['p'], clients: ['codex'] }), 'c');
+    expect(where.sql).toBe(
+      'c.local_day BETWEEN @from AND @to AND c.model IN (@model0, @model1) AND c.project_id IN (@project0) AND c.client IN (@client0)',
+    );
+    expect(where.params).toEqual({ from: '2026-09-01', to: '2026-09-02', model0: 'a', model1: 'b', project0: 'p', client0: 'codex' });
   });
 });
 

@@ -1,5 +1,5 @@
-import type { CostBreakdown, ModelBreakdown, ProjectBreakdown, TokenBreakdown } from '../../../shared/api.js';
-import { modelColor, modelLabel, projectLabel } from '../../../shared/models.js';
+import type { ClientBreakdown, CostBreakdown, ModelBreakdown, ProjectBreakdown, TokenBreakdown } from '../../../shared/api.js';
+import { CLIENT_META, isClient, modelColor, modelLabel, projectLabel } from '../../../shared/models.js';
 import type { Db } from '../connection.js';
 import { buildWhere, type SqlFragment, type UsageFilter } from './filter-sql.js';
 
@@ -136,6 +136,31 @@ export function queryByProject(db: Db, filter: UsageFilter): ProjectBreakdown[] 
     cost: row.cost,
     sessions: row.sessions,
   }));
+}
+
+export function queryByClient(db: Db, filter: UsageFilter, totalCost: number): ClientBreakdown[] {
+  const where = buildWhere(filter);
+  const rows = db
+    .prepare(
+      `SELECT client, TOTAL(${TOKENS_SUM_SQL}) AS tokens, TOTAL(cost) AS cost
+       FROM usage_costed WHERE ${where.sql}
+       GROUP BY client ORDER BY cost DESC, client`,
+    )
+    .all(where.params) as { client: string; tokens: number; cost: number }[];
+  // The column's CHECK constraint admits only known clients; the guard only narrows the type.
+  return rows.flatMap((row) =>
+    isClient(row.client)
+      ? [
+          {
+            client: row.client,
+            ...CLIENT_META[row.client],
+            tokensTotal: row.tokens,
+            cost: row.cost,
+            share: totalCost > 0 ? row.cost / totalCost : 0,
+          },
+        ]
+      : [],
+  );
 }
 
 export function queryPeriodCost(db: Db, filter: UsageFilter): number {

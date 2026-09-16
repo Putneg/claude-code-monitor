@@ -8,9 +8,11 @@
   import { dataRequest, type DataRequest } from './lib/request';
   import { emptyStateKind } from './lib/status-view';
   import {
+    effectiveView,
     parseViewState,
     serializeViewState,
     toggleProject,
+    visibleStacks,
     withCustomRange,
     withPreset,
     withSettings,
@@ -18,6 +20,7 @@
     type ViewSettings,
     type ViewState,
   } from './lib/view-state';
+  import CodexLimits from './components/CodexLimits.svelte';
   import EmptyState from './components/EmptyState.svelte';
   import FilterBar from './components/FilterBar.svelte';
   import Footer from './components/Footer.svelte';
@@ -46,7 +49,11 @@
   let inflight: AbortController | null = null;
 
   const range = $derived(status !== null && filters !== null ? resolveRange(view, status.today, filters.bounds.firstDay) : null);
-  const request = $derived(range === null ? null : dataRequest(view, range));
+  /** Clients with data; the client switch and the client stack need two. */
+  const available = $derived(filters === null ? [] : filters.clients.map((client) => client.id));
+  /** The view as queried and drawn: see effectiveView. The URL keeps `view`. */
+  const shown = $derived(effectiveView(view, available));
+  const request = $derived(range === null ? null : dataRequest(shown, range));
   const empty = $derived(status === null ? null : emptyStateKind(status, overview));
 
   /** One poll: refresh the status; reload filters and data only when the change key moved. */
@@ -155,12 +162,13 @@
       <EmptyState kind={empty} {status} message={null} />
     {:else}
       <FilterBar
-        {view}
+        view={shown}
         {range}
         today={status.today}
         firstDay={filters.bounds.firstDay}
         models={filters.models}
         projects={filters.projects}
+        clients={filters.clients}
         onPreset={setPreset}
         onCustomRange={setCustomRange}
         onSettings={setSettings}
@@ -172,11 +180,17 @@
         <EmptyState kind={empty} {status} message={`${range.from} → ${range.to}`} />
       {:else if overview !== null && sessions !== null}
         <section class="hero" aria-busy={loading}>
-          <SpendHero {overview} unit={view.unit} rangeText={rangeLabel(view, range)} firstDay={filters.bounds.firstDay} />
+          <div class="side">
+            <SpendHero {overview} unit={view.unit} rangeText={rangeLabel(view, range)} firstDay={filters.bounds.firstDay} />
+            {#if status.codexLimits.length > 0}
+              <CodexLimits limits={status.codexLimits} now={status.now} timeZone={status.tz} />
+            {/if}
+          </div>
           <Timeline
             series={overview.series}
             bucket={overview.range.bucket}
-            stack={view.stack}
+            stack={shown.stack}
+            stacks={visibleStacks(available)}
             unit={view.unit}
             cumulative={view.cumulative}
             dayAllowed={dayBucketAllowed(range)}
@@ -221,6 +235,13 @@
   .hero[aria-busy='true'] {
     opacity: 0.55;
     transition: opacity 0s linear 250ms;
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
   }
 
   .row2 {

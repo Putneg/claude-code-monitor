@@ -15,9 +15,10 @@ export function makeStatus(overrides: Partial<StatusResponse> = {}): StatusRespo
       usageMismatches: 0,
     },
     backfill: { active: false, filesDone: 0, filesTotal: 0, bytesDone: 0, bytesTotal: 0 },
-    sources: [{ path: '/claude/projects', ok: true, files: 3, bytes: 4_096, error: null }],
+    sources: [{ path: '/claude/projects', ok: true, files: 3, bytes: 4_096, error: null, client: 'claude', required: true, present: true }],
     pricing: { source: 'litellm', fetchedAt: '2026-09-11T06:00:00.000Z', unpricedModels: [] },
     data: { firstDay: '2026-08-01', lastDay: '2026-09-11', rows: 10 },
+    codexLimits: [],
     ...overrides,
   };
 }
@@ -60,6 +61,7 @@ export function makeOverview(overrides: Partial<OverviewResponse> = {}): Overvie
     series: SERIES,
     byModel: [],
     byProject: [],
+    byClient: [{ client: 'claude', label: 'claude code', color: '#FFB000', tokensTotal: 1_250, cost: 8, share: 1 }],
     ...overrides,
   };
 }
