@@ -3,7 +3,7 @@ import { extname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const ROOTS = ['src', 'tests', 'scripts'];
-const TEXT_EXTENSIONS = new Set(['.ts', '.js', '.json', '.svelte', '.css', '.html', '.md', '.jsonl']);
+const TEXT_EXTENSIONS = new Set(['.ts', '.js', '.mjs', '.json', '.svelte', '.css', '.html', '.md', '.jsonl']);
 const CYRILLIC = /\p{Script=Cyrillic}/u;
 
 function listFiles(dir: string): string[] {

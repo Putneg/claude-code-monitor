@@ -9,6 +9,7 @@ import { createApp } from './http/app.js';
 import { runIngestCycle } from './ingest/ingestor.js';
 import { createNotices } from './ingest/notices.js';
 import { sourceRoots } from './ingest/sources.js';
+import { createClaudeLimitsSource } from './limits/claude-limits-source.js';
 import type { Logger } from './logger.js';
 import { createFetchPayload, createPricingService, PRICING_RETRY_MS, type PricingService } from './pricing/refresher.js';
 import { PRICE_SNAPSHOT } from './pricing/snapshot.js';
@@ -173,6 +174,7 @@ export async function startService(config: Config, logger: Logger, options: Serv
   const controller = new AbortController();
   const scheduler = startIngest({ config, db, repos, status, pricing, logger, shouldStop: () => controller.signal.aborted });
   const background: Background = { controller, scheduler, pricing, db };
+  const claudeLimits = createClaudeLimitsSource(config.claudeLimitsFile, logger.child({ module: 'limits' }));
   const app = createApp({
     db,
     repos,
@@ -182,13 +184,20 @@ export async function startService(config: Config, logger: Logger, options: Serv
     now: Date.now,
     calendarNow: options.calendarNow,
     logger: logger.child({ module: 'http' }),
+    claudeLimits: () => claudeLimits.read(),
     webRoot: options.webRoot === undefined ? DEFAULT_WEB_ROOT : options.webRoot,
     healthStaleMs: HEALTH_STALE_INTERVALS * config.scanIntervalMs,
     allowedHosts: config.allowedHosts,
   });
   const listening = await listen(app, config, logger).catch((error: unknown) => abortStart(background, error, logger));
   logger.info(
-    { port: listening.port, host: config.host, sources: sourceRoots(config).map((root) => root.path), tz: config.timeZone },
+    {
+      port: listening.port,
+      host: config.host,
+      sources: sourceRoots(config).map((root) => root.path),
+      claudeLimitsFile: config.claudeLimitsFile,
+      tz: config.timeZone,
+    },
     'claude-code-monitor started',
   );
   return { port: listening.port, stop: () => stopAll(background, listening.server) };

@@ -92,6 +92,22 @@ export interface CodexLimit {
   readonly observedAt: string;
 }
 
+export type ClaudeLimitKind = 'five_hour' | 'seven_day' | 'spend_limit';
+
+export interface ClaudeLimitWindow {
+  readonly kind: ClaudeLimitKind;
+  /** 0-100 for five_hour and seven_day; spend_limit goes above 100 once the limit is exceeded. */
+  readonly usedPercent: number;
+  readonly resetsAt: string;
+}
+
+/** The newest Claude subscription rate-limit reading, as the status line tap recorded it. */
+export interface ClaudeLimit {
+  readonly windows: readonly ClaudeLimitWindow[];
+  /** When the tap last saw the newest of these windows. */
+  readonly observedAt: string;
+}
+
 export interface StatusResponse {
   readonly now: string;
   readonly today: Day;
@@ -103,6 +119,8 @@ export interface StatusResponse {
   readonly data: { readonly firstDay: Day | null; readonly lastDay: Day | null; readonly rows: number };
   /** Empty when no Codex rollout has reported rate limits. */
   readonly codexLimits: readonly CodexLimit[];
+  /** Null until the status line tap has recorded a reading (see the README section "Claude limits"). */
+  readonly claudeLimits: ClaudeLimit | null;
 }
 
 export interface ModelOption {

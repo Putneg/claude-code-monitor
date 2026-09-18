@@ -1,4 +1,4 @@
-import type { CodexLimit, CodexLimitWindow } from '../../shared/api.js';
+import type { ClaudeLimit, ClaudeLimitKind, CodexLimit, StatusResponse } from '../../shared/api.js';
 import { formatStamp, formatTimeOfDay, zonedDay } from './format.js';
 import { progressBar } from './status-view.js';
 
@@ -8,6 +8,7 @@ const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 1_440;
 const MINUTES_PER_WEEK = 10_080;
 const STALE_TEXT = 'reset · no newer data';
+const CLAUDE_WINDOW_LABELS: Readonly<Record<ClaudeLimitKind, string>> = { five_hour: '5h', seven_day: 'weekly', spend_limit: 'spend' };
 
 export interface LimitWindowView {
   readonly key: string;
@@ -21,11 +22,20 @@ export interface LimitWindowView {
 }
 
 export interface LimitView {
+  /** Unique across clients: 'claude' or 'codex:<limit id>'. */
   readonly id: string;
   readonly title: string;
   readonly asOf: string;
   readonly windows: readonly LimitWindowView[];
   readonly credits: string | null;
+}
+
+/** One window before formatting: what both clients' readings reduce to. */
+interface WindowReading {
+  readonly key: string;
+  readonly label: string;
+  readonly usedPercent: number;
+  readonly resetsAt: string | null;
 }
 
 /** 300 -> 5h, 10080 -> weekly, 4320 -> 3d, 90 -> 90m. */
@@ -41,13 +51,13 @@ function moment(iso: string, nowIso: string, timeZone: string): string {
   return zonedDay(iso, timeZone) === zonedDay(nowIso, timeZone) ? formatTimeOfDay(iso, timeZone) : formatStamp(iso, timeZone);
 }
 
-function windowView(window: CodexLimitWindow, nowIso: string, timeZone: string): LimitWindowView {
-  const label = windowLabel(window.windowMinutes);
+function windowView(window: WindowReading, nowIso: string, timeZone: string): LimitWindowView {
+  const { key, label } = window;
   if (window.resetsAt !== null && Date.parse(window.resetsAt) <= Date.parse(nowIso)) {
-    return { key: window.slot, label, bar: progressBar(0, 100, LIMIT_CELLS), percent: '', resets: STALE_TEXT, stale: true };
+    return { key, label, bar: progressBar(0, 100, LIMIT_CELLS), percent: '', resets: STALE_TEXT, stale: true };
   }
   return {
-    key: window.slot,
+    key,
     label,
     bar: progressBar(window.usedPercent, 100, LIMIT_CELLS),
     percent: `${Math.round(window.usedPercent)}%`,
@@ -67,13 +77,42 @@ function titleOf(limit: CodexLimit): string {
   return parts.filter((part): part is string => part !== null && part.length > 0).join(' · ');
 }
 
-/** The Codex limits widget, one block per limit id; times in the server's zone. */
+/** The Codex limits blocks, one per limit id; times in the server's zone. */
 export function limitViews(limits: readonly CodexLimit[], nowIso: string, timeZone: string): LimitView[] {
   return limits.map((limit) => ({
-    id: limit.limitId,
+    id: `codex:${limit.limitId}`,
     title: titleOf(limit),
     asOf: `as of ${moment(limit.observedAt, nowIso, timeZone)}`,
-    windows: limit.windows.map((window) => windowView(window, nowIso, timeZone)),
+    windows: limit.windows.map((window) =>
+      windowView(
+        { key: window.slot, label: windowLabel(window.windowMinutes), usedPercent: window.usedPercent, resetsAt: window.resetsAt },
+        nowIso,
+        timeZone,
+      ),
+    ),
     credits: creditsText(limit),
   }));
+}
+
+/** The Claude limits block; times in the server's zone. */
+export function claudeLimitView(limit: ClaudeLimit, nowIso: string, timeZone: string): LimitView {
+  return {
+    id: 'claude',
+    title: 'claude limits',
+    asOf: `as of ${moment(limit.observedAt, nowIso, timeZone)}`,
+    windows: limit.windows.map((window) =>
+      windowView(
+        { key: window.kind, label: CLAUDE_WINDOW_LABELS[window.kind], usedPercent: window.usedPercent, resetsAt: window.resetsAt },
+        nowIso,
+        timeZone,
+      ),
+    ),
+    credits: null,
+  };
+}
+
+/** Every limits block the status reports: Claude first, then Codex. */
+export function statusLimitViews(status: Pick<StatusResponse, 'claudeLimits' | 'codexLimits' | 'now' | 'tz'>): LimitView[] {
+  const claude = status.claudeLimits === null ? [] : [claudeLimitView(status.claudeLimits, status.now, status.tz)];
+  return [...claude, ...limitViews(status.codexLimits, status.now, status.tz)];
 }

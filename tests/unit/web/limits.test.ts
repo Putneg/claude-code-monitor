@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CodexLimit } from '../../../src/shared/api.js';
-import { limitViews, windowLabel } from '../../../src/web/lib/limits.js';
+import type { ClaudeLimit, CodexLimit } from '../../../src/shared/api.js';
+import { claudeLimitView, limitViews, statusLimitViews, windowLabel } from '../../../src/web/lib/limits.js';
 
 const NOW = '2026-09-16T08:13:00.000Z';
 
@@ -33,7 +33,7 @@ describe('limitViews', () => {
   it('builds the title, the reading time and one line per window', () => {
     expect(limitViews([limit()], NOW, 'UTC')).toEqual([
       {
-        id: 'codex',
+        id: 'codex:codex',
         title: 'codex limits · prolite',
         asOf: 'as of 08:12',
         windows: [
@@ -63,7 +63,7 @@ describe('limitViews', () => {
 
   it('names a non-default limit and an older reading, and leaves out a missing plan', () => {
     const view = limitViews([limit({ limitId: 'premium', planType: null, observedAt: '2026-09-14T08:49:51.000Z' })], NOW, 'UTC');
-    expect(view[0]).toMatchObject({ id: 'premium', title: 'codex limits · premium', asOf: 'as of 09-14 08:49' });
+    expect(view[0]).toMatchObject({ id: 'codex:premium', title: 'codex limits · premium', asOf: 'as of 09-14 08:49' });
   });
 
   it('shows the time zone of the server', () => {
@@ -78,5 +78,67 @@ describe('limitViews', () => {
     [null, null],
   ])('shows credits %j as %s', (credits, text) => {
     expect(limitViews([limit({ credits })], NOW, 'UTC')[0]?.credits).toBe(text);
+  });
+});
+
+const claude = (overrides: Partial<ClaudeLimit> = {}): ClaudeLimit => ({
+  windows: [
+    { kind: 'five_hour', usedPercent: 23.4, resetsAt: '2026-09-16T12:00:00.000Z' },
+    { kind: 'seven_day', usedPercent: 41.6, resetsAt: '2026-09-19T07:00:00.000Z' },
+  ],
+  observedAt: '2026-09-16T08:10:00.000Z',
+  ...overrides,
+});
+
+describe('claudeLimitView', () => {
+  it('labels the windows and keeps their order', () => {
+    expect(claudeLimitView(claude(), NOW, 'UTC')).toEqual({
+      id: 'claude',
+      title: 'claude limits',
+      asOf: 'as of 08:10',
+      windows: [
+        { key: 'five_hour', label: '5h', bar: '▓▓░░░░░░░░', percent: '23%', resets: 'resets 12:00', stale: false },
+        { key: 'seven_day', label: 'weekly', bar: '▓▓▓▓░░░░░░', percent: '42%', resets: 'resets 09-19 07:00', stale: false },
+      ],
+      credits: null,
+    });
+  });
+
+  it('shows a spend window above 100% with a full bar', () => {
+    const view = claudeLimitView(
+      claude({ windows: [{ kind: 'spend_limit', usedPercent: 130, resetsAt: '2026-10-01T00:00:00.000Z' }] }),
+      NOW,
+      'UTC',
+    );
+    expect(view.windows).toEqual([
+      { key: 'spend_limit', label: 'spend', bar: '▓▓▓▓▓▓▓▓▓▓', percent: '130%', resets: 'resets 10-01 00:00', stale: false },
+    ]);
+  });
+
+  it('marks a window that has reset since the reading as stale', () => {
+    const view = claudeLimitView(
+      claude({ windows: [{ kind: 'five_hour', usedPercent: 90, resetsAt: '2026-09-16T08:00:00.000Z' }] }),
+      NOW,
+      'UTC',
+    );
+    expect(view.windows).toEqual([
+      { key: 'five_hour', label: '5h', bar: '░░░░░░░░░░', percent: '', resets: 'reset · no newer data', stale: true },
+    ]);
+  });
+});
+
+describe('statusLimitViews', () => {
+  const status = { now: NOW, tz: 'UTC', claudeLimits: claude(), codexLimits: [limit()] };
+
+  it('lists the Claude block before the Codex blocks', () => {
+    expect(statusLimitViews(status).map((view) => view.id)).toEqual(['claude', 'codex:codex']);
+  });
+
+  it('leaves out a missing Claude reading', () => {
+    expect(statusLimitViews({ ...status, claudeLimits: null }).map((view) => view.id)).toEqual(['codex:codex']);
+  });
+
+  it('is empty without readings', () => {
+    expect(statusLimitViews({ ...status, claudeLimits: null, codexLimits: [] })).toEqual([]);
   });
 });

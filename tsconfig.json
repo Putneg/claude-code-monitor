@@ -14,6 +14,8 @@
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": true,
     "skipLibCheck": true,
     "noEmit": true
   },
@@ -23,6 +25,7 @@
     "src/web/lib/**/*.ts",
     "tests/**/*.ts",
     "scripts/**/*.ts",
+    "scripts/**/*.mjs",
     "vitest.config.ts",
     "vite.config.ts",
     "playwright.config.ts"

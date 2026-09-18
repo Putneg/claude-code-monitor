@@ -5,6 +5,7 @@ import { CODEX_SESSION_FOLDERS } from '../src/server/config.js';
 import { createLogger } from '../src/server/logger.js';
 import { DEFAULT_WEB_ROOT, startService } from '../src/server/service.js';
 import { writeCodexFixture } from '../tests/e2e/fixture-codex.js';
+import { writeClaudeLimitsFixture } from '../tests/e2e/fixture-limits.js';
 import { E2E_NOW_MS, writeFixture } from '../tests/e2e/fixture.js';
 
 /** 'claude' serves the Claude Code fixture alone; 'mixed' adds a Codex home. */
@@ -23,9 +24,14 @@ if (!existsSync(join(DEFAULT_WEB_ROOT, 'index.html'))) {
 // Playwright kills this process on Windows without a signal, so stale data is removed at start, not at exit.
 rmSync(DATA_DIR, { recursive: true, force: true });
 writeFixture(join(DATA_DIR, 'projects'));
-// Without the mixed fixture the Codex home does not exist, which is how the dashboard sees a machine without Codex.
+// Without the mixed fixture the Codex home and the Claude limits file do not exist, which is how the dashboard sees a machine
+// without Codex and without the status line tap.
 const codexHome = join(DATA_DIR, 'codex');
-if (FIXTURE === 'mixed') writeCodexFixture(codexHome);
+const claudeLimitsFile = join(DATA_DIR, 'claude-code-monitor', 'rate-limits.json');
+if (FIXTURE === 'mixed') {
+  writeCodexFixture(codexHome);
+  writeClaudeLimitsFixture(claudeLimitsFile);
+}
 
 // The pricing URL is unreachable on purpose (the embedded snapshot is used); warn-level logs would print a stack trace on every run.
 const logger = createLogger('error');
@@ -36,6 +42,7 @@ const service = await startService(
     allowedHosts: [],
     projectsDirs: [join(DATA_DIR, 'projects')],
     codexRoots: CODEX_SESSION_FOLDERS.map((folder) => join(codexHome, folder)),
+    claudeLimitsFile,
     dbPath: join(DATA_DIR, 'monitor.db'),
     scanIntervalMs: 60_000,
     timeZone: 'UTC',

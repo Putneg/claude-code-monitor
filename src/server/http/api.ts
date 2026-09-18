@@ -1,5 +1,5 @@
 import { Hono, type Context } from 'hono';
-import type { FiltersResponse, OverviewResponse, SessionsResponse, StatusResponse } from '../../shared/api.js';
+import type { ClaudeLimit, FiltersResponse, OverviewResponse, SessionsResponse, StatusResponse } from '../../shared/api.js';
 import type { Db } from '../db/connection.js';
 import { queryFilters } from '../db/queries/filters.js';
 import { queryOverview } from '../db/queries/overview.js';
@@ -24,6 +24,8 @@ export interface ApiDeps {
   /** Clock behind "today", the presets and status.now; defaults to `now`. The E2E server freezes it (scripts/e2e-server.ts). */
   readonly calendarNow?: () => number;
   readonly logger: Logger;
+  /** The status line tap's newest Claude rate-limit reading, or null (see limits/claude-limits-source.ts). */
+  readonly claudeLimits: () => ClaudeLimit | null;
 }
 
 /** Entries of the in-process /api response cache. */
@@ -76,6 +78,7 @@ function buildStatus(deps: ApiDeps, toLocalDay: (tsMs: number) => string): Statu
     pricing: deps.pricing.state(),
     data: { firstDay: bounds.firstDay, lastDay: bounds.lastDay, rows: deps.repos.usage.count() },
     codexLimits: deps.repos.codexLimits.all().map(toCodexLimit),
+    claudeLimits: deps.claudeLimits(),
   };
 }
 

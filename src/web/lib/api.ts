@@ -31,7 +31,7 @@ export interface ApiClient {
 
 /** Top-level fields each response must have before the UI trusts it. */
 const REQUIRED_KEYS = {
-  status: ['today', 'tz', 'sync', 'backfill', 'sources', 'pricing', 'data', 'codexLimits'],
+  status: ['today', 'tz', 'sync', 'backfill', 'sources', 'pricing', 'data', 'codexLimits', 'claudeLimits'],
   filters: ['models', 'projects', 'clients', 'bounds'],
   overview: ['range', 'totals', 'series', 'byModel', 'byProject', 'byClient'],
   sessions: ['total', 'sessions'],

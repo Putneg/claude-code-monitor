@@ -36,6 +36,7 @@ function testConfig(root: string, projectsDir: string, name: string): Config {
     allowedHosts: [],
     projectsDirs: [projectsDir],
     codexRoots: [],
+    claudeLimitsFile: join(root, name, 'rate-limits.json'),
     dbPath: join(root, name, 'monitor.db'),
     scanIntervalMs: 60_000,
     timeZone: 'UTC',

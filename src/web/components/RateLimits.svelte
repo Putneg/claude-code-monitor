@@ -1,18 +1,15 @@
 <script lang="ts">
-  import type { CodexLimit } from '../../shared/api';
-  import { limitViews } from '../lib/limits';
+  import type { LimitView } from '../lib/limits';
 
   interface Props {
-    limits: readonly CodexLimit[];
-    now: string;
-    timeZone: string;
+    /** Prepared blocks (statusLimitViews): Claude first, then Codex. */
+    views: readonly LimitView[];
   }
 
-  let { limits, now, timeZone }: Props = $props();
-  const views = $derived(limitViews(limits, now, timeZone));
+  let { views }: Props = $props();
 </script>
 
-<div class="limits" data-testid="codex-limits">
+<div class="limits" data-testid="rate-limits">
   {#each views as view (view.id)}
     <div class="block" role="group" aria-label={view.title}>
       <div class="head">

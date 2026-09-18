@@ -3,6 +3,7 @@
   import type { Day, FiltersResponse, OverviewResponse, SessionsResponse, StatusResponse } from '../shared/api';
   import { createApiClient, describeError } from './lib/api';
   import { historyAction } from './lib/history';
+  import { statusLimitViews } from './lib/limits';
   import { changeKey, decideLoad, POLL_INTERVAL_MS, startPolling, type LoadMark } from './lib/poll';
   import { dayBucketAllowed, hourBucketAllowed, rangeLabel, resolveRange } from './lib/range';
   import { dataRequest, type DataRequest } from './lib/request';
@@ -20,12 +21,12 @@
     type ViewSettings,
     type ViewState,
   } from './lib/view-state';
-  import CodexLimits from './components/CodexLimits.svelte';
   import EmptyState from './components/EmptyState.svelte';
   import FilterBar from './components/FilterBar.svelte';
   import Footer from './components/Footer.svelte';
   import ModelsTable from './components/ModelsTable.svelte';
   import ProjectsTable from './components/ProjectsTable.svelte';
+  import RateLimits from './components/RateLimits.svelte';
   import SessionsTable from './components/SessionsTable.svelte';
   import SpendHero from './components/SpendHero.svelte';
   import StatusBar from './components/StatusBar.svelte';
@@ -55,6 +56,8 @@
   const shown = $derived(effectiveView(view, available));
   const request = $derived(range === null ? null : dataRequest(shown, range));
   const empty = $derived(status === null ? null : emptyStateKind(status, overview));
+  /** The Claude and Codex rate-limit blocks; none until a reading exists. */
+  const limitBlocks = $derived(status === null ? [] : statusLimitViews(status));
 
   /** One poll: refresh the status; reload filters and data only when the change key moved. */
   async function refreshStatus(): Promise<void> {
@@ -182,8 +185,8 @@
         <section class="hero" aria-busy={loading}>
           <div class="side">
             <SpendHero {overview} unit={view.unit} rangeText={rangeLabel(view, range)} firstDay={filters.bounds.firstDay} />
-            {#if status.codexLimits.length > 0}
-              <CodexLimits limits={status.codexLimits} now={status.now} timeZone={status.tz} />
+            {#if limitBlocks.length > 0}
+              <RateLimits views={limitBlocks} />
             {/if}
           </div>
           <Timeline

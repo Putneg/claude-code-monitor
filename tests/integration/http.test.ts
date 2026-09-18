@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { OverviewResponse, SessionsResponse, StatusResponse } from '../../src/shared/api.js';
+import type { ClaudeLimit, OverviewResponse, SessionsResponse, StatusResponse } from '../../src/shared/api.js';
 import { ALLOWED_HOSTNAMES, allowedHostnames, createApp, type AppDeps } from '../../src/server/http/app.js';
 import { createLogger } from '../../src/server/logger.js';
 import { StatusTracker } from '../../src/server/status.js';
@@ -29,6 +29,7 @@ function setup(overrides: Partial<AppDeps> = {}) {
     timeZone: 'UTC',
     now: () => NOW,
     logger: createLogger('silent'),
+    claudeLimits: () => null,
     webRoot: null,
     healthStaleMs: STALE_MS,
     allowedHosts: [],
@@ -55,6 +56,7 @@ describe('GET /api/status', () => {
       pricing: { source: 'snapshot', unpricedModels: ['claude-mystery'] },
       data: { firstDay: '2026-09-09', lastDay: '2026-09-11', rows: 5 },
       codexLimits: [],
+      claudeLimits: null,
     });
     expect(response.headers.get('content-security-policy')).toBe(
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
@@ -474,6 +476,21 @@ describe('Codex limits in /api/status', () => {
         observedAt: '2026-09-11T11:00:00.000Z',
       },
     ]);
+  });
+});
+
+describe('Claude limits in /api/status', () => {
+  it('reports the status line tap reading', async () => {
+    const reading: ClaudeLimit = {
+      windows: [
+        { kind: 'five_hour', usedPercent: 23, resetsAt: '2026-09-11T14:00:00.000Z' },
+        { kind: 'seven_day', usedPercent: 41, resetsAt: '2026-09-15T09:00:00.000Z' },
+      ],
+      observedAt: '2026-09-11T11:55:00.000Z',
+    };
+    const { get } = setup({ claudeLimits: () => reading });
+    const { body } = await get('/api/status');
+    expect((body as StatusResponse).claudeLimits).toEqual(reading);
   });
 });
 

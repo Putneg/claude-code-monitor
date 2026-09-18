@@ -27,11 +27,15 @@ services:
       # Container paths and port are fixed; values in .env cannot override them.
       CLAUDE_PROJECTS_DIRS: /claude/projects
       CODEX_HOME: /codex
+      CLAUDE_LIMITS_FILE: /claude/claude-code-monitor/rate-limits.json
       DB_PATH: /data/monitor.db
       HOST: 0.0.0.0
       PORT: '8739'
     volumes:
       - ${CLAUDE_HOME:?Set CLAUDE_HOME in .env (see .env.example)}/projects:/claude/projects:ro
+      # The status line tap (scripts/claude-limits-tap.mjs) writes Claude's rate limits into this folder. The folder is
+      # mounted, not the file: the tap replaces the file by renaming, which a single-file bind mount would not follow.
+      - ${CLAUDE_HOME:?Set CLAUDE_HOME in .env (see .env.example)}/claude-code-monitor:/claude/claude-code-monitor:ro
       # Codex is optional. Only its two rollout folders are mounted, so the rest of the Codex home (auth.json included)
       # stays out of the container. Without CODEX_HOME, Docker creates empty ./.codex-none folders instead.
       - ${CODEX_HOME:-./.codex-none}/sessions:/codex/sessions:ro

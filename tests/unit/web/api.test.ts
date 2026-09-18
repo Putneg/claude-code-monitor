@@ -14,6 +14,7 @@ const STATUS_BODY = {
   pricing: {},
   data: {},
   codexLimits: [],
+  claudeLimits: null,
 };
 const ACCEPT = { accept: 'application/json' };
 
@@ -124,7 +125,7 @@ describe('createApiClient', () => {
     await expect(aborted.status()).rejects.toBe(abort);
   });
 
-  it('requires the client and Codex fields', async () => {
+  it('requires the client, Codex and Claude fields', async () => {
     const oldStatus = { now: 'n', today: '2026-09-11', tz: 'UTC', sync: {}, backfill: {}, sources: [], pricing: {}, data: {} };
     await expect(createApiClient(async () => json(oldStatus)).status()).rejects.toMatchObject({ code: 'bad_response' });
     await expect(createApiClient(async () => json({ models: [], projects: [], bounds: {} })).filters()).rejects.toMatchObject({
@@ -132,6 +133,8 @@ describe('createApiClient', () => {
     });
     const overview = { range: {}, totals: {}, series: {}, byModel: [], byProject: [] };
     await expect(createApiClient(async () => json(overview)).overview('x=1')).rejects.toMatchObject({ code: 'bad_response' });
+    const withoutClaude = Object.fromEntries(Object.entries(STATUS_BODY).filter(([key]) => key !== 'claudeLimits'));
+    await expect(createApiClient(async () => json(withoutClaude)).status()).rejects.toMatchObject({ code: 'bad_response' });
   });
 });
 

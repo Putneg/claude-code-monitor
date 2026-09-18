@@ -426,11 +426,11 @@ test('clearing the project selection keeps the picker open and focused', async (
   await expect(panel).toBeVisible();
 });
 
-test('shows no client switch or Codex limits without Codex data', async ({ page }) => {
+test('shows no client switch or rate limits without Codex data or the tap file', async ({ page }) => {
   await page.goto(RANGE);
   await expect(page.getByTestId('spend-hero')).toBeVisible();
   await expect(page.getByRole('group', { name: 'client' })).toHaveCount(0);
-  await expect(page.getByTestId('codex-limits')).toHaveCount(0);
+  await expect(page.getByTestId('rate-limits')).toHaveCount(0);
   await expect(page.getByTestId('timeline').getByRole('button', { name: 'client', exact: true })).toHaveCount(0);
   // The fixture server points at a Codex home that does not exist: an absent optional source is neither listed nor a warning.
   await expect(page.getByTestId('status-bar')).not.toContainText('codex');

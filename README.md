@@ -25,6 +25,8 @@ days by default) and prices every call with LiteLLM's public price list, the sam
   8 projects (click one to filter), and the top 50 sessions by cost or recency.
 - **Codex limits**: the newest rate-limit reading Codex logged: plan, usage of each window and when it resets. A window that
   has reset since the reading is marked as such.
+- **Claude limits**: Claude subscription usage of the 5-hour and weekly windows (and a gateway spend limit) with reset times,
+  recorded by a small status line tap (see [Claude limits](#claude-limits)).
 - **Shareable views**: everything the page shows is kept in the URL (`range` or `from`/`to`, `models`, `projects`, `clients`,
   `unit`, `stack`, `bucket`, `cum`, `sort`), so a view can be bookmarked.
 - **Live**: the page polls `/api/status` every 30 seconds and reloads when new transcript lines or new prices arrive.
@@ -52,6 +54,8 @@ Then open http://127.0.0.1:8739 (or your `MONITOR_PORT`) in a browser.
   `mkdir -p ~/.codex/sessions ~/.codex/archived_sessions` (use the path you set as `CODEX_HOME`). Docker creates a missing
   mount folder owned by root, and Codex could then not write to it. Without `CODEX_HOME`, Compose mounts two empty folders
   under `./.codex-none` instead; git ignores that folder.
+- On Linux, also create `~/.claude/claude-code-monitor` (under your `CLAUDE_HOME`) before the first start, for the same
+  reason: the status line tap writes the Claude limits there.
 - The first start backfills every available transcript; the status bar and `GET /api/status` (`backfill`) show the progress.
   After that, only appended bytes are read every `SCAN_INTERVAL_SEC`.
 - History lives in the `claude-code-monitor_monitor-data` volume, and the transcript directories are mounted read-only. Once
@@ -69,6 +73,8 @@ Then open http://127.0.0.1:8739 (or your `MONITOR_PORT`) in a browser.
 - From Codex rollouts the database stores response, thread and session ids, model names, timestamps, token counts, the
   working directory and the latest rate-limit reading (plan, window usage, reset times, credit balance). Codex prompts,
   responses and thread names are never stored.
+- The Claude limits file holds only window usage percentages and times. The tap reads the status line input Claude Code
+  already passes to your status line and writes nothing else.
 
 ## Security
 
@@ -85,26 +91,27 @@ Then open http://127.0.0.1:8739 (or your `MONITOR_PORT`) in a browser.
 - Outside Docker, a new database file gets mode 0600, and a data directory the service has to create gets mode 0700. An existing
   database keeps its mode; run `chmod 600 data/monitor.db*` to tighten it.
 - Under the compose file, the container runs as the non-root `node` user with a read-only root filesystem, no Linux capabilities
-  and `no-new-privileges`. Only Claude Code's `projects` directory and Codex's `sessions` and `archived_sessions` folders are
-  mounted, so neither tool's credentials enter the container.
+  and `no-new-privileges`. Only Claude Code's `projects` and `claude-code-monitor` folders and Codex's `sessions` and
+  `archived_sessions` folders are mounted, so neither tool's credentials enter the container.
 
 ## Configuration
 
-| Variable                | Default                                          | Under Docker Compose                             | Description                                                                                                                                                           |
-| ----------------------- | ------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                  | `8739`                                           | pinned to `8739`                                 | HTTP port                                                                                                                                                             |
-| `HOST`                  | `127.0.0.1`                                      | pinned to `0.0.0.0`                              | Bind address; compose publishes the port on `127.0.0.1` only                                                                                                          |
-| `ALLOWED_HOSTS`         | empty                                            | from `.env`                                      | Extra hostnames the server answers besides `localhost`, `127.0.0.1` and `[::1]`: comma-separated, no scheme or port. Not access control                               |
-| `CLAUDE_PROJECTS_DIRS`  | `~/.claude/projects`                             | pinned to `/claude/projects`                     | Comma-separated transcript roots; a root inside another root is dropped                                                                                               |
-| `CODEX_HOME`            | `~/.codex`                                       | host path from `.env`; pinned to `/codex` inside | Comma-separated Codex homes (one path under Docker Compose). Their `sessions` and `archived_sessions` folders are read when they exist; a missing one is not an error |
-| `DB_PATH`               | `./data/monitor.db`                              | pinned to `/data/monitor.db`                     | SQLite database file                                                                                                                                                  |
-| `SCAN_INTERVAL_SEC`     | `60`                                             | from `.env`                                      | Rescan interval in seconds (10-3600)                                                                                                                                  |
-| `TZ`                    | the host time zone (`UTC` if unknown)            | from `.env`, `UTC` when unset                    | IANA time zone for daily buckets, for example `Europe/Kyiv` or `America/New_York`. Changing it later is safe: stored days are recomputed                              |
-| `PRICING_URL`           | LiteLLM's `model_prices_and_context_window.json` | from `.env`                                      | Price source. Must be an `https:` URL; `http:` is accepted only for `localhost`, `127.0.0.1` and `[::1]`                                                              |
-| `PRICING_REFRESH_HOURS` | `24`                                             | from `.env`                                      | Price refresh period in hours (1-168)                                                                                                                                 |
-| `LOG_LEVEL`             | `info`                                           | from `.env`                                      | pino log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`                                                                                        |
-| `CLAUDE_HOME`           | —                                                | required                                         | Compose only: absolute path of the Claude Code directory that contains `projects`                                                                                     |
-| `MONITOR_PORT`          | `8739`                                           | optional                                         | Compose only: host port, published on `127.0.0.1`                                                                                                                     |
+| Variable                | Default                                                                               | Under Docker Compose                                     | Description                                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                  | `8739`                                                                                | pinned to `8739`                                         | HTTP port                                                                                                                                                             |
+| `HOST`                  | `127.0.0.1`                                                                           | pinned to `0.0.0.0`                                      | Bind address; compose publishes the port on `127.0.0.1` only                                                                                                          |
+| `ALLOWED_HOSTS`         | empty                                                                                 | from `.env`                                              | Extra hostnames the server answers besides `localhost`, `127.0.0.1` and `[::1]`: comma-separated, no scheme or port. Not access control                               |
+| `CLAUDE_PROJECTS_DIRS`  | `~/.claude/projects`                                                                  | pinned to `/claude/projects`                             | Comma-separated transcript roots; a root inside another root is dropped                                                                                               |
+| `CODEX_HOME`            | `~/.codex`                                                                            | host path from `.env`; pinned to `/codex` inside         | Comma-separated Codex homes (one path under Docker Compose). Their `sessions` and `archived_sessions` folders are read when they exist; a missing one is not an error |
+| `CLAUDE_LIMITS_FILE`    | `claude-code-monitor/rate-limits.json` next to the first `CLAUDE_PROJECTS_DIRS` entry | pinned to `/claude/claude-code-monitor/rate-limits.json` | The status line tap's file (see [Claude limits](#claude-limits)). A missing file shows no Claude limits                                                               |
+| `DB_PATH`               | `./data/monitor.db`                                                                   | pinned to `/data/monitor.db`                             | SQLite database file                                                                                                                                                  |
+| `SCAN_INTERVAL_SEC`     | `60`                                                                                  | from `.env`                                              | Rescan interval in seconds (10-3600)                                                                                                                                  |
+| `TZ`                    | the host time zone (`UTC` if unknown)                                                 | from `.env`, `UTC` when unset                            | IANA time zone for daily buckets, for example `Europe/Kyiv` or `America/New_York`. Changing it later is safe: stored days are recomputed                              |
+| `PRICING_URL`           | LiteLLM's `model_prices_and_context_window.json`                                      | from `.env`                                              | Price source. Must be an `https:` URL; `http:` is accepted only for `localhost`, `127.0.0.1` and `[::1]`                                                              |
+| `PRICING_REFRESH_HOURS` | `24`                                                                                  | from `.env`                                              | Price refresh period in hours (1-168)                                                                                                                                 |
+| `LOG_LEVEL`             | `info`                                                                                | from `.env`                                              | pino log level: `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`                                                                                        |
+| `CLAUDE_HOME`           | —                                                                                     | required                                                 | Compose only: absolute path of the Claude Code directory that contains `projects`                                                                                     |
+| `MONITOR_PORT`          | `8739`                                                                                | optional                                                 | Compose only: host port, published on `127.0.0.1`                                                                                                                     |
 
 Under Docker Compose, set everything in `.env`. Compose reads `CLAUDE_HOME`, `CODEX_HOME` and `MONITOR_PORT` from `.env` or
 from your shell, but every other setting, `TZ` included, reaches the container only through `.env`: a variable exported in
@@ -183,6 +190,58 @@ Cost is an API-equivalent estimate: tokens times LiteLLM's current per-token pri
   price, such as `codex-auto-review`, at the rates of a fallback model, so its Codex cost can be noticeably higher.
 - **Not shown.** Thread names; the cost is an API-equivalent estimate, not ChatGPT plan credits.
 
+## Claude limits
+
+Claude Code does not write its subscription rate limits to disk. It passes them only to your status line command, as the
+`rate_limits` field of the JSON on stdin (Pro and Max plans, after the first model response of a session). The tap
+`scripts/claude-limits-tap.mjs` records them for the monitor:
+
+- It reads the status line input, keeps the highest usage seen in each window in
+  `${CLAUDE_CONFIG_DIR:-~/.claude}/claude-code-monitor/rate-limits.json`, and writes the input to stdout unchanged, so your
+  existing status line keeps working.
+- It needs Node.js 22.12 or later on the host and has no dependencies. A failure is printed on stderr; the status line
+  still gets its input.
+- Several sessions share one file. Within one window the higher usage wins, so an idle session that redraws its status line
+  with older numbers cannot lower the reading; a later reset time starts a new window.
+
+Set it up in `~/.claude/settings.json`. With another status line command, put the tap in front of it:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node /path/to/claude-code-monitor/scripts/claude-limits-tap.mjs | <your status line command>"
+  }
+}
+```
+
+Without one, use `--standalone`, which prints a short summary such as `5h 23% · weekly 41%` instead of the input:
+
+```json
+{ "statusLine": { "type": "command", "command": "node /path/to/claude-code-monitor/scripts/claude-limits-tap.mjs --standalone" } }
+```
+
+On Windows, Claude Code runs the command through Git Bash when it is installed: write paths with forward slashes
+(`C:/Users/you/claude-code-monitor/scripts/claude-limits-tap.mjs`), and use the full path to `node` if it is not on the
+Git Bash `PATH`.
+
+The dashboard shows the `claude limits` block once the file exists. A window whose reset time has passed shows
+`reset · no newer data` until a session reports it again. To clear a window that is no longer reported, delete the file;
+the tap writes a new one on the next reading.
+
+Claude Code does not show the tap's error messages in the status line. If the block never appears, run `claude --debug`,
+which logs the exit code and stderr of the first status line run in a session, or run the command by hand with a sample
+input and read the error it prints:
+
+```bash
+echo '{"rate_limits":{"five_hour":{"used_percentage":1,"resets_at":1000000000}}}' | node /path/to/claude-code-monitor/scripts/claude-limits-tap.mjs --standalone
+```
+
+On Linux the usual cause is a `claude-code-monitor` folder that Docker created as root. When the file exists but cannot
+be used, the monitor logs a warning (`docker compose logs claude-code-monitor`). Under Docker Compose, the folder is
+mounted read-only from `CLAUDE_HOME`; outside Docker, set `CLAUDE_LIMITS_FILE` if your Claude Code directory is not the
+parent of the first `CLAUDE_PROJECTS_DIRS` entry.
+
 ## Operations
 
 **Upgrade.** Back up first (below), then:
@@ -191,6 +250,9 @@ Cost is an API-equivalent estimate: tokens times LiteLLM's current per-token pri
 git pull
 docker compose up -d --build
 ```
+
+On Linux, when you upgrade from a version without Claude limits, first create `~/.claude/claude-code-monitor` (under your
+`CLAUDE_HOME`) as your own user; see [Claude limits](#claude-limits).
 
 A new version may migrate the database on its first start. An older image refuses a database that a newer one has migrated
 (`database schema version N is newer than this build supports`), so to roll back, restore the backup you took before the
@@ -230,13 +292,13 @@ scan intervals. The image's health check uses it, so `docker ps` shows the conta
 
 ## API
 
-| Endpoint                                                         | Description                                                                                              |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `GET /healthz`                                                   | `{ ok, lastSyncAgeSec }`: 200 when healthy, 503 when the database or ingest has a problem                |
-| `GET /api/status`                                                | Sync and backfill progress, sources, pricing freshness, data bounds, data warnings and Codex rate limits |
-| `GET /api/filters`                                               | Models, projects and date bounds for the filters                                                         |
-| `GET /api/overview?from&to&models&projects&clients&bucket&stack` | Totals, time series and breakdowns (`stack`: `model`, `type`, `project` or `client`)                     |
-| `GET /api/sessions?from&to&models&projects&clients&sort&limit`   | Sessions ranked by cost or recency                                                                       |
+| Endpoint                                                         | Description                                                                                                          |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `GET /healthz`                                                   | `{ ok, lastSyncAgeSec }`: 200 when healthy, 503 when the database or ingest has a problem                            |
+| `GET /api/status`                                                | Sync and backfill progress, sources, pricing freshness, data bounds, data warnings, and Claude and Codex rate limits |
+| `GET /api/filters`                                               | Models, projects and date bounds for the filters                                                                     |
+| `GET /api/overview?from&to&models&projects&clients&bucket&stack` | Totals, time series and breakdowns (`stack`: `model`, `type`, `project` or `client`)                                 |
+| `GET /api/sessions?from&to&models&projects&clients&sort&limit`   | Sessions ranked by cost or recency                                                                                   |
 
 - Dates are local days (`YYYY-MM-DD`, inclusive) between 2000-01-01 and 2999-12-31; without them the range is the last 30
   days. `models`, `projects` and `clients` (`claude`, `codex`) are comma-separated ids.

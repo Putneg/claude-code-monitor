@@ -19,6 +19,7 @@ export function makeStatus(overrides: Partial<StatusResponse> = {}): StatusRespo
     pricing: { source: 'litellm', fetchedAt: '2026-09-11T06:00:00.000Z', unpricedModels: [] },
     data: { firstDay: '2026-08-01', lastDay: '2026-09-11', rows: 10 },
     codexLimits: [],
+    claudeLimits: null,
     ...overrides,
   };
 }

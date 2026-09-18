@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { join, resolve as resolvePath, sep } from 'node:path';
+import { dirname, join, resolve as resolvePath, sep } from 'node:path';
 import { z } from 'zod';
 import { isValidTimeZone } from './time.js';
 
@@ -16,6 +16,8 @@ export interface Config {
   readonly projectsDirs: readonly string[];
   /** Codex rollout folders: <home>/sessions and <home>/archived_sessions for every CODEX_HOME entry. Optional sources. */
   readonly codexRoots: readonly string[];
+  /** The status line tap's rate-limit file (scripts/claude-limits-tap.mjs). Optional: a missing file shows no Claude limits. */
+  readonly claudeLimitsFile: string;
   readonly dbPath: string;
   readonly scanIntervalMs: number;
   readonly timeZone: string;
@@ -53,6 +55,7 @@ const envSchema = z.object({
   ALLOWED_HOSTS: z.string().optional(),
   CLAUDE_PROJECTS_DIRS: z.string().optional(),
   CODEX_HOME: z.string().optional(),
+  CLAUDE_LIMITS_FILE: z.string().optional(),
   DB_PATH: z.string().trim().min(1).optional(),
   SCAN_INTERVAL_SEC: z.coerce.number().int().min(10).max(3_600).default(60),
   TZ: z
@@ -149,6 +152,14 @@ function assertSeparateRoots(claudeDirs: readonly string[], codexRoots: readonly
   }
 }
 
+/** CLAUDE_LIMITS_FILE, or claude-code-monitor/rate-limits.json in the parent of the first projects root (where the tap writes). */
+function parseLimitsFile(value: string | undefined, projectsDirs: readonly string[]): string {
+  const explicit = value?.trim() ?? '';
+  if (explicit.length > 0) return resolvePath(expandHome(explicit));
+  const firstRoot = projectsDirs[0] ?? join(homedir(), '.claude', 'projects');
+  return join(dirname(firstRoot), 'claude-code-monitor', 'rate-limits.json');
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = envSchema.safeParse(env);
   if (!parsed.success) {
@@ -165,6 +176,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     allowedHosts: parseAllowedHosts(values.ALLOWED_HOSTS),
     projectsDirs,
     codexRoots,
+    claudeLimitsFile: parseLimitsFile(values.CLAUDE_LIMITS_FILE, projectsDirs),
     dbPath: values.DB_PATH ?? join(process.cwd(), 'data', 'monitor.db'),
     scanIntervalMs: values.SCAN_INTERVAL_SEC * 1_000,
     timeZone: values.TZ,

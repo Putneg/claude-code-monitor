@@ -24,10 +24,11 @@ export default defineConfig({
     // - the Svelte components (src/web/**/*.svelte) and src/web/main.ts: the Playwright suite (pnpm test:e2e) covers them;
     // - src/server/main.ts: the process entry point; its shutdown logic lives in shutdown.ts, which is unit-tested;
     // - src/server/logger.ts: a thin wrapper around pino;
-    // - src/server/pricing/snapshot.ts: generated price data (pnpm update-prices).
+    // - src/server/pricing/snapshot.ts: generated price data (pnpm update-prices);
+    // - the tap entry point scripts/claude-limits-tap.mjs: a few lines around runTap, run as a process by its integration test.
     coverage: {
       provider: 'v8',
-      include: ['src/server/**/*.ts', 'src/shared/**/*.ts', 'src/web/lib/**/*.ts'],
+      include: ['src/server/**/*.ts', 'src/shared/**/*.ts', 'src/web/lib/**/*.ts', 'scripts/claude-limits-tap-core.mjs'],
       exclude: ['src/server/main.ts', 'src/server/logger.ts', 'src/server/pricing/snapshot.ts'],
       reporter: ['text', 'html'],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },

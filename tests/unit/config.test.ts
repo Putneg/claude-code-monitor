@@ -12,6 +12,7 @@ describe('loadConfig', () => {
       allowedHosts: [],
       projectsDirs: [join(homedir(), '.claude', 'projects')],
       codexRoots: [join(homedir(), '.codex', 'sessions'), join(homedir(), '.codex', 'archived_sessions')],
+      claudeLimitsFile: join(homedir(), '.claude', 'claude-code-monitor', 'rate-limits.json'),
       dbPath: join(process.cwd(), 'data', 'monitor.db'),
       scanIntervalMs: 60_000,
       timeZone: defaultTimeZone(),
@@ -28,6 +29,7 @@ describe('loadConfig', () => {
       ALLOWED_HOSTS: 'Monitor.LAN, [FE80:0:0:0:0:0:0:1] ,monitor.lan,',
       CLAUDE_PROJECTS_DIRS: '/claude/projects, ~/other ,',
       CODEX_HOME: '~/codex-a, /codex/b',
+      CLAUDE_LIMITS_FILE: '~/limits/rate-limits.json',
       DB_PATH: '/data/monitor.db',
       SCAN_INTERVAL_SEC: '15',
       TZ: 'UTC',
@@ -47,6 +49,7 @@ describe('loadConfig', () => {
         resolve('/codex/b/sessions'),
         resolve('/codex/b/archived_sessions'),
       ],
+      claudeLimitsFile: join(homedir(), 'limits', 'rate-limits.json'),
       dbPath: '/data/monitor.db',
       scanIntervalMs: 15_000,
       timeZone: 'UTC',
@@ -54,6 +57,16 @@ describe('loadConfig', () => {
       pricingRefreshMs: 21_600_000,
       logLevel: 'debug',
     });
+  });
+
+  it('puts the Claude limits file next to the first projects directory unless CLAUDE_LIMITS_FILE is set', () => {
+    expect(loadConfig({ CLAUDE_PROJECTS_DIRS: '/claude/projects,/other/projects' }).claudeLimitsFile).toBe(
+      resolve('/claude/claude-code-monitor/rate-limits.json'),
+    );
+    expect(loadConfig({ CLAUDE_PROJECTS_DIRS: '/claude/projects', CLAUDE_LIMITS_FILE: '  ' }).claudeLimitsFile).toBe(
+      resolve('/claude/claude-code-monitor/rate-limits.json'),
+    );
+    expect(loadConfig({ CLAUDE_LIMITS_FILE: ' /limits/a.json ' }).claudeLimitsFile).toBe(resolve('/limits/a.json'));
   });
 
   it('lists a repeated projects directory once, in first-occurrence order', () => {
