@@ -1,20 +1,16 @@
 import type { OverviewResponse, SourceStatus, StatusResponse } from '../../shared/api.js';
 import { formatBytes, formatClock, formatStamp, plural } from './format.js';
 
-export const PROGRESS_CELLS = 5;
-
-/** '▓▓▓░░': done/total in `cells` character cells. */
-export function progressBar(done: number, total: number, cells = PROGRESS_CELLS): string {
-  const ratio = total > 0 ? Math.min(Math.max(done / total, 0), 1) : 0;
-  const filled = Math.round(ratio * cells);
-  return '▓'.repeat(filled) + '░'.repeat(cells - filled);
+/** done/total as a share of 0-1; 0 without a total. */
+export function progressShare(done: number, total: number): number {
+  return total > 0 ? Math.min(Math.max(done / total, 0), 1) : 0;
 }
 
 export interface BackfillProgress {
   /** Files done out of files found, e.g. '312/754'. */
   readonly files: string;
-  /** '▓▓░░░': decorative, hidden from screen readers. */
-  readonly bar: string;
+  /** For the decorative bar, hidden from screen readers. */
+  readonly share: number;
 }
 
 export interface StatusIndicator {
@@ -35,7 +31,7 @@ export interface StatusView {
   readonly warnings: readonly string[];
 }
 
-const OFFLINE: StatusIndicator = { kind: 'offline', text: '○ offline', progress: null };
+const OFFLINE: StatusIndicator = { kind: 'offline', text: 'offline', progress: null };
 
 function indicator(status: StatusResponse, apiDown: boolean): StatusIndicator {
   if (apiDown) return OFFLINE;
@@ -44,10 +40,10 @@ function indicator(status: StatusResponse, apiDown: boolean): StatusIndicator {
     return {
       kind: 'backfill',
       text: 'backfill',
-      progress: { files: `${filesDone}/${filesTotal}`, bar: progressBar(filesDone, filesTotal) },
+      progress: { files: `${filesDone}/${filesTotal}`, share: progressShare(filesDone, filesTotal) },
     };
   }
-  return { kind: 'live', text: '● live', progress: null };
+  return { kind: 'live', text: 'live', progress: null };
 }
 
 /** The indicator before the first status response: connecting, or offline once a poll has failed. */

@@ -2,8 +2,6 @@ import type { OverviewTotals } from '../../shared/api.js';
 import { TOKEN_TYPE_META, TOKEN_TYPE_ORDER, type TokenTypeKey } from '../../shared/models.js';
 import { formatPercent } from './format.js';
 
-export const BAR_CELLS = 24;
-
 export interface TokenTypeRow {
   readonly key: TokenTypeKey;
   readonly label: string;
@@ -34,15 +32,6 @@ export function tokenTypeRows(totals: OverviewTotals): TokenTypeRow[] {
     tokenShare: tokenTotal > 0 ? byType[key].tokens / tokenTotal : 0,
     costShare: costTotal > 0 ? byType[key].cost / costTotal : 0,
   }));
-}
-
-/** Bar of `cells` character cells rounded to the nearest half cell; a sliver marks a tiny non-zero share. */
-export function asciiBar(share: number, cells = BAR_CELLS): string {
-  const clamped = Math.min(Math.max(share, 0), 1);
-  const halves = Math.round(clamped * cells * 2);
-  const full = Math.floor(halves / 2);
-  const tail = halves % 2 === 1 ? '▌' : clamped > 0 && halves === 0 ? '▏' : '';
-  return '█'.repeat(full) + tail;
 }
 
 /** "cache reads = 97% of tokens but 60% of cost", for the cache types that have tokens. */

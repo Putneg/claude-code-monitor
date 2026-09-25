@@ -24,7 +24,7 @@ export const CHART_THEME = {
   fg: '#D8D4C7',
   dim: '#8B877A',
   accent: '#FFB000',
-  font: "'JetBrains Mono', ui-monospace, monospace",
+  font: "'IBM Plex Sans', system-ui, sans-serif",
 } as const;
 
 export const CUMULATIVE_NAME = 'cumulative';
@@ -152,22 +152,54 @@ function peakMarker(peak: Peak, unit: Unit, bucketCount: number, z: number): Mar
  */
 const stackZ = (index: number, top: number): number => 2 + (top - index);
 
-function stackedSeries(series: OverviewSeries, unit: Unit): LineSeriesOption[] {
+/** The category after the last bucket on the hidden edge axis: the right edge of the last band. */
+export const EDGE_END = 'end';
+
+/**
+ * The stacked areas. A step line through band centers on the visible axis would leave the left half of the first
+ * band and the right half of the last one empty, so they are drawn on a hidden axis whose N + 1 categories are the
+ * edges of the N bands (boundaryGap false): with step 'end' and the last value repeated, every bucket fills its band.
+ */
+function drawnSeries(series: OverviewSeries, unit: Unit): LineSeriesOption[] {
+  const values = unitValues(series, unit);
+  const top = series.keys.length - 1;
+  return series.keys.map((key, index) => {
+    const data = values[index] ?? [];
+    return {
+      id: `key:${key.key}`,
+      name: key.label,
+      type: 'line',
+      xAxisIndex: 1,
+      step: 'end',
+      stack: 'total',
+      symbol: 'none',
+      silent: true,
+      z: stackZ(index, top),
+      data: [...data, data.at(-1) ?? 0],
+      itemStyle: { color: key.color },
+      lineStyle: { width: 1.5, color: key.color, shadowBlur: GLOW_BLUR, shadowColor: key.color },
+      areaStyle: { color: key.color, opacity: AREA_OPACITY },
+      emphasis: { disabled: true },
+    };
+  });
+}
+
+/**
+ * Invisible lines with each key's own values on the visible axis: the axis tooltip reads them (the edge axis does not
+ * trigger it), and the top one carries the peak marker at the center of its band.
+ */
+function valueSeries(series: OverviewSeries, unit: Unit): LineSeriesOption[] {
   const values = unitValues(series, unit);
   const peak = peakOf(series, unit);
   const top = series.keys.length - 1;
   return series.keys.map((key, index) => ({
-    id: `key:${key.key}`,
+    id: `value:${key.key}`,
     name: key.label,
     type: 'line',
-    step: 'middle',
-    stack: 'total',
     symbol: 'none',
-    z: stackZ(index, top),
     data: [...(values[index] ?? [])],
     itemStyle: { color: key.color },
-    lineStyle: { width: 1.5, color: key.color, shadowBlur: GLOW_BLUR, shadowColor: key.color },
-    areaStyle: { color: key.color, opacity: AREA_OPACITY },
+    lineStyle: { opacity: 0 },
     emphasis: { disabled: true },
     ...(index === top && peak !== null ? { markPoint: peakMarker(peak, unit, series.buckets.length, stackZ(0, top) + 1) } : {}),
   }));
@@ -229,18 +261,28 @@ export function buildTimelineOption(series: OverviewSeries, settings: TimelineSe
     brush: BRUSH_OPTION,
     // The brush preprocessor always injects a toolbox with brush buttons; keep it hidden.
     toolbox: { show: false },
-    xAxis: {
-      type: 'category',
-      data: [...series.buckets],
-      boundaryGap: true,
-      axisLine: { lineStyle: { color: CHART_THEME.line } },
-      axisTick: { show: false },
-      axisLabel: { ...AXIS_LABEL, hideOverlap: true, formatter: (value: string) => axisBucketLabel(value, multiDay) },
-    },
+    xAxis: [
+      {
+        type: 'category',
+        data: [...series.buckets],
+        boundaryGap: true,
+        axisLine: { lineStyle: { color: CHART_THEME.line } },
+        axisTick: { show: false },
+        axisLabel: { ...AXIS_LABEL, hideOverlap: true, formatter: (value: string) => axisBucketLabel(value, multiDay) },
+      },
+      // The band edges, for the stacked areas only (see drawnSeries): no labels, no pointer, no tooltip.
+      {
+        type: 'category',
+        data: [...series.buckets, EDGE_END],
+        boundaryGap: false,
+        show: false,
+        axisPointer: { show: false, triggerTooltip: false },
+      },
+    ],
     yAxis: [
       { type: 'value', axisLabel: valueAxisLabel, splitLine: { lineStyle: { color: CHART_THEME.line, type: 'dashed' } } },
       { type: 'value', show: cumulative, position: 'right', splitLine: { show: false }, axisLabel: valueAxisLabel },
     ],
-    series: [...stackedSeries(series, unit), ...(cumulative ? [cumulativeSeries(series, unit)] : [])],
+    series: [...drawnSeries(series, unit), ...valueSeries(series, unit), ...(cumulative ? [cumulativeSeries(series, unit)] : [])],
   };
 }

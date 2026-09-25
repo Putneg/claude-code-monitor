@@ -12,6 +12,8 @@ import {
   withCustomRange,
   withPreset,
   withSettings,
+  withShiftedRange,
+  visibleModels,
   type ViewState,
 } from '../../../src/web/lib/view-state.js';
 
@@ -203,5 +205,63 @@ describe('visibleStacks', () => {
   it('offers the client stack only with two clients', () => {
     expect(visibleStacks(['claude'])).toEqual(['model', 'type', 'project']);
     expect(visibleStacks(['claude', 'codex'])).toEqual(['model', 'type', 'project', 'client']);
+  });
+});
+
+describe('withShiftedRange', () => {
+  const today = '2026-09-25';
+  const base = { ...DEFAULT_VIEW, models: ['claude-opus-5'], unit: 'tok' as const, bucket: 'hour' as const, sort: 'recent' as const };
+
+  it('sets a custom range and keeps the bucket and the other settings', () => {
+    expect(withShiftedRange({ ...base, range: '7d' }, { from: '2026-09-12', to: '2026-09-18' }, today)).toEqual({
+      ...base,
+      range: null,
+      from: '2026-09-12',
+      to: '2026-09-18',
+    });
+  });
+
+  it('turns back into the preset of the same length when the range ends today', () => {
+    const custom = { ...base, range: null, from: '2026-09-24', to: '2026-09-24' };
+    expect(withShiftedRange(custom, { from: '2026-09-25', to: '2026-09-25' }, today)).toEqual({
+      ...base,
+      range: 'today',
+      from: null,
+      to: null,
+    });
+    expect(withShiftedRange(custom, { from: '2026-09-19', to: '2026-09-25' }, today)).toMatchObject({ range: '7d', from: null, to: null });
+    expect(withShiftedRange(custom, { from: '2026-08-27', to: '2026-09-25' }, today)).toMatchObject({ range: '30d' });
+    expect(withShiftedRange(custom, { from: '2026-06-28', to: '2026-09-25' }, today)).toMatchObject({ range: '90d' });
+  });
+
+  it('stays custom for other lengths, even when the range ends today', () => {
+    expect(withShiftedRange(base, { from: '2026-09-12', to: '2026-09-25' }, today)).toMatchObject({ range: null, from: '2026-09-12' });
+  });
+});
+
+describe('visibleModels', () => {
+  const option = (id: string) => ({ id, label: id, color: '#FFB000', priced: true });
+  const all = ['claude-fable-5', 'claude-haiku-4-5', 'claude-opus-5', 'claude-sonnet-5'].map(option);
+
+  it('lists the models used in the period, in the order of the full list', () => {
+    expect(visibleModels(all, ['claude-sonnet-5', 'claude-fable-5'], []).map((model) => model.id)).toEqual([
+      'claude-fable-5',
+      'claude-sonnet-5',
+    ]);
+  });
+
+  it('keeps an explicitly checked model visible even without usage in the period', () => {
+    expect(visibleModels(all, ['claude-sonnet-5'], ['claude-haiku-4-5']).map((model) => model.id)).toEqual([
+      'claude-haiku-4-5',
+      'claude-sonnet-5',
+    ]);
+  });
+
+  it('lists every model before the first overview arrives', () => {
+    expect(visibleModels(all, null, [])).toEqual(all);
+  });
+
+  it('ignores used ids that the full list does not know', () => {
+    expect(visibleModels(all, ['claude-new-model'], []).map((model) => model.id)).toEqual([]);
   });
 });

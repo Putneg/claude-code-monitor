@@ -99,42 +99,44 @@
   <div class="head">
     <div class="controls">
       <span class="lbl">stack</span>
-      {#each stacks as choice (choice)}
-        <button type="button" class="opt" class:on-soft={stack === choice} aria-pressed={stack === choice} onclick={() => onStack(choice)}>
-          {choice}
-        </button>
-      {/each}
-      <span class="sep">·</span>
+      <span class="seg">
+        {#each stacks as choice (choice)}
+          <button type="button" class="opt" class:on={stack === choice} aria-pressed={stack === choice} onclick={() => onStack(choice)}>
+            {choice}
+          </button>
+        {/each}
+      </span>
       <span class="lbl">bucket</span>
-      <button
-        type="button"
-        class="opt"
-        class:on-soft={bucket === 'day'}
-        aria-pressed={bucket === 'day'}
-        aria-disabled={!dayAllowed}
-        aria-describedby={dayAllowed ? undefined : `${uid}-day`}
-        title={dayAllowed ? undefined : DAY_REASON}
-        onclick={() => pickBucket('day', dayAllowed)}
-      >
-        day
-      </button>
-      <button
-        type="button"
-        class="opt"
-        class:on-soft={bucket === 'hour'}
-        aria-pressed={bucket === 'hour'}
-        aria-disabled={!hourAllowed}
-        aria-describedby={hourAllowed ? undefined : `${uid}-hour`}
-        title={hourAllowed ? undefined : HOUR_REASON}
-        onclick={() => pickBucket('hour', hourAllowed)}
-      >
-        hour
-      </button>
+      <span class="seg">
+        <button
+          type="button"
+          class="opt"
+          class:on={bucket === 'day'}
+          aria-pressed={bucket === 'day'}
+          aria-disabled={!dayAllowed}
+          aria-describedby={dayAllowed ? undefined : `${uid}-day`}
+          title={dayAllowed ? undefined : DAY_REASON}
+          onclick={() => pickBucket('day', dayAllowed)}
+        >
+          day
+        </button>
+        <button
+          type="button"
+          class="opt"
+          class:on={bucket === 'hour'}
+          aria-pressed={bucket === 'hour'}
+          aria-disabled={!hourAllowed}
+          aria-describedby={hourAllowed ? undefined : `${uid}-hour`}
+          title={hourAllowed ? undefined : HOUR_REASON}
+          onclick={() => pickBucket('hour', hourAllowed)}
+        >
+          hour
+        </button>
+      </span>
       {#if !dayAllowed}<span id="{uid}-day" class="sr-only">{DAY_REASON}</span>{/if}
       {#if !hourAllowed}<span id="{uid}-hour" class="sr-only">{HOUR_REASON}</span>{/if}
-      <span class="sep">·</span>
-      <button type="button" role="checkbox" class="opt check" aria-checked={cumulative} onclick={() => onCumulative(!cumulative)}>
-        <span aria-hidden="true">[{cumulative ? 'x' : ' '}]</span> cumulative
+      <button type="button" role="checkbox" class="chk" aria-checked={cumulative} onclick={() => onCumulative(!cumulative)}>
+        <span class="sq" class:off={!cumulative} aria-hidden="true"></span>cumulative
       </button>
     </div>
     <span class="hint">drag to zoom ⟷</span>
@@ -142,7 +144,7 @@
   {#if series.stack !== 'model'}
     <div class="legend">
       {#each series.keys as key (key.key)}
-        <span><span class="dot" style:background={key.color}></span>{key.label}</span>
+        <span><span class="sq" style:--sq={key.color}></span>{key.label}</span>
       {/each}
     </div>
   {/if}
@@ -162,7 +164,7 @@
     gap: 6px 16px;
     margin-bottom: 4px;
     color: var(--dim);
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .controls {
@@ -173,16 +175,11 @@
   }
 
   .lbl {
-    margin-right: 2px;
+    margin: 0 2px 0 10px;
   }
 
-  .sep {
-    margin: 0 6px;
-    color: var(--dimmer);
-  }
-
-  .check {
-    white-space: pre;
+  .lbl:first-child {
+    margin-left: 0;
   }
 
   .hint {
@@ -194,7 +191,7 @@
     flex-wrap: wrap;
     gap: 2px 14px;
     margin-bottom: 2px;
-    font-size: 11px;
+    font-size: 11.5px;
     color: var(--dim);
   }
 

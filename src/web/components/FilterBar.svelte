@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import type { ClientOption, Day, ModelOption, ProjectOption } from '../../shared/api';
   import { createDebouncer, DATE_APPLY_DELAY_MS, typedRange, type Debouncer } from '../lib/date-input';
-  import type { DayRange } from '../lib/range';
+  import { shiftSide, type DayRange, type ShiftDirection } from '../lib/range';
   import { clientChoice, isChecked, PRESETS, toggleModel, type RangePreset, type ViewSettings, type ViewState } from '../lib/view-state';
   import ProjectPicker from './ProjectPicker.svelte';
 
@@ -17,10 +17,21 @@
     onPreset: (preset: RangePreset) => void;
     onCustomRange: (from: Day, to: Day) => void;
     onSettings: (patch: Partial<ViewSettings>) => void;
+    onShift: (direction: ShiftDirection) => void;
   }
 
-  let { view, range, today, firstDay, models, projects, clients, onPreset, onCustomRange, onSettings }: Props = $props();
+  let { view, range, today, firstDay, models, projects, clients, onPreset, onCustomRange, onSettings, onShift }: Props = $props();
   const choice = $derived(clientChoice(view.clients));
+
+  const uid = $props.id();
+  const bounds = $derived({ today, firstDay });
+  const back = $derived(shiftSide(view.range, range, 'back', bounds));
+  const forward = $derived(shiftSide(view.range, range, 'forward', bounds));
+
+  /** A disabled step stays focusable (aria-disabled) so its reason can be read; a click on it does nothing. */
+  function step(direction: ShiftDirection, allowed: boolean): void {
+    if (allowed) onShift(direction);
+  }
 
   const modelIds = $derived(models.map((model) => model.id));
   const checkedCount = $derived(models.filter((model) => isChecked(view.models, model.id)).length);
@@ -83,70 +94,125 @@
 <div class="fb" data-testid="filter-bar">
   <div class="grp" role="group" aria-label="range">
     <span class="lbl">range</span>
-    {#each PRESETS as preset (preset)}
+    <span class="seg">
+      {#each PRESETS as preset (preset)}
+        <button
+          type="button"
+          class="opt"
+          class:on={view.range === preset}
+          aria-pressed={view.range === preset}
+          onclick={() => onPreset(preset)}
+        >
+          {preset}
+        </button>
+      {/each}
+    </span>
+    <span class="dates">
       <button
         type="button"
-        class="opt"
-        class:on={view.range === preset}
-        aria-pressed={view.range === preset}
-        onclick={() => onPreset(preset)}
+        class="step"
+        aria-label={back.label}
+        aria-disabled={!back.allowed}
+        aria-describedby={back.allowed ? undefined : `${uid}-back`}
+        title={back.reason ?? back.label}
+        onclick={() => step('back', back.allowed)}>‹</button
       >
-        {preset}
-      </button>
-    {/each}
-    <input
-      type="date"
-      class="date"
-      aria-label="from"
-      value={range.from}
-      min={firstDay ?? undefined}
-      max={today}
-      oninput={(event) => onTyped(event.currentTarget, 'from')}
-      onblur={(event) => onLeave(event.currentTarget, 'from')}
-      onkeydown={(event) => onDateKey(event, 'from')}
-    />
-    <span class="lbl">→</span>
-    <input
-      type="date"
-      class="date"
-      aria-label="to"
-      value={range.to}
-      min={firstDay ?? undefined}
-      max={today}
-      oninput={(event) => onTyped(event.currentTarget, 'to')}
-      onblur={(event) => onLeave(event.currentTarget, 'to')}
-      onkeydown={(event) => onDateKey(event, 'to')}
-    />
+      <input
+        type="date"
+        class="date"
+        aria-label="from"
+        value={range.from}
+        min={firstDay ?? undefined}
+        max={today}
+        oninput={(event) => onTyped(event.currentTarget, 'from')}
+        onblur={(event) => onLeave(event.currentTarget, 'from')}
+        onkeydown={(event) => onDateKey(event, 'from')}
+      />
+      <span class="lbl">→</span>
+      <input
+        type="date"
+        class="date"
+        aria-label="to"
+        value={range.to}
+        min={firstDay ?? undefined}
+        max={today}
+        oninput={(event) => onTyped(event.currentTarget, 'to')}
+        onblur={(event) => onLeave(event.currentTarget, 'to')}
+        onkeydown={(event) => onDateKey(event, 'to')}
+      />
+      <button
+        type="button"
+        class="step"
+        aria-label={forward.label}
+        aria-disabled={!forward.allowed}
+        aria-describedby={forward.allowed ? undefined : `${uid}-forward`}
+        title={forward.reason ?? forward.label}
+        onclick={() => step('forward', forward.allowed)}>›</button
+      >
+    </span>
+    {#if !back.allowed}<span id="{uid}-back" class="sr-only">{back.reason}</span>{/if}
+    {#if !forward.allowed}<span id="{uid}-forward" class="sr-only">{forward.reason}</span>{/if}
   </div>
 
   {#if clients.length > 1}
     <div class="grp" role="group" aria-label="client">
       <span class="lbl">client</span>
-      <button
-        type="button"
-        class="opt"
-        class:on={choice === 'all'}
-        aria-pressed={choice === 'all'}
-        onclick={() => onSettings({ clients: [] })}
-      >
-        all
-      </button>
-      {#each clients as client (client.id)}
+      <span class="seg">
         <button
           type="button"
           class="opt"
-          class:on={choice === client.id}
-          aria-pressed={choice === client.id}
-          title={client.label}
-          onclick={() => onSettings({ clients: [client.id] })}
+          class:on={choice === 'all'}
+          aria-pressed={choice === 'all'}
+          onclick={() => onSettings({ clients: [] })}
         >
-          {client.id}
+          all
         </button>
-      {/each}
+        {#each clients as client (client.id)}
+          <button
+            type="button"
+            class="opt"
+            class:on={choice === client.id}
+            aria-pressed={choice === client.id}
+            title={client.label}
+            onclick={() => onSettings({ clients: [client.id] })}
+          >
+            {client.id}
+          </button>
+        {/each}
+      </span>
     </div>
   {/if}
 
-  <div class="grp" role="group" aria-label="models">
+  <div class="grp" role="group" aria-label="projects">
+    <span class="lbl">projects</span>
+    <ProjectPicker {projects} selected={view.projects} onChange={(ids) => onSettings({ projects: ids })} />
+  </div>
+
+  <div class="grp" role="group" aria-label="unit">
+    <span class="lbl">unit</span>
+    <span class="seg">
+      <button
+        type="button"
+        class="opt"
+        class:on={view.unit === 'usd'}
+        aria-pressed={view.unit === 'usd'}
+        aria-label="$ (dollars)"
+        onclick={() => onSettings({ unit: 'usd' })}
+      >
+        $
+      </button>
+      <button
+        type="button"
+        class="opt"
+        class:on={view.unit === 'tok'}
+        aria-pressed={view.unit === 'tok'}
+        onclick={() => onSettings({ unit: 'tok' })}
+      >
+        tok
+      </button>
+    </span>
+  </div>
+  <div class="grp models" role="group" aria-label="models">
     <span class="lbl">models</span>
     {#each models as model (model.id)}
       {@const checked = isChecked(view.models, model.id)}
@@ -159,38 +225,10 @@
         title={model.priced ? model.id : `${model.id} (no price: counted as $0)`}
         onclick={() => onSettings({ models: toggleModel(view.models, modelIds, model.id) })}
       >
-        <span class="box" style:color={model.color} aria-hidden="true">[{checked ? 'x' : ' '}]</span>
+        <span class="sq" class:off={!checked} style:--sq={model.color} aria-hidden="true"></span>
         {model.label}
       </button>
     {/each}
-  </div>
-
-  <div class="grp" role="group" aria-label="projects">
-    <span class="lbl">projects</span>
-    <ProjectPicker {projects} selected={view.projects} onChange={(ids) => onSettings({ projects: ids })} />
-  </div>
-
-  <div class="grp" role="group" aria-label="unit">
-    <span class="lbl">unit</span>
-    <button
-      type="button"
-      class="opt"
-      class:on={view.unit === 'usd'}
-      aria-pressed={view.unit === 'usd'}
-      aria-label="$ (dollars)"
-      onclick={() => onSettings({ unit: 'usd' })}
-    >
-      $
-    </button>
-    <button
-      type="button"
-      class="opt"
-      class:on={view.unit === 'tok'}
-      aria-pressed={view.unit === 'tok'}
-      onclick={() => onSettings({ unit: 'tok' })}
-    >
-      tok
-    </button>
   </div>
 </div>
 
@@ -220,7 +258,8 @@
   .date {
     background: transparent;
     border: 1px solid var(--line);
-    padding: 0 6px;
+    border-radius: 3px;
+    padding: 1px 8px;
     color: var(--fg);
   }
 
@@ -228,21 +267,38 @@
     border-color: var(--dim);
   }
 
-  .chk {
-    padding: 1px 4px;
+  .models {
+    flex-basis: 100%;
+  }
+
+  /* The dates and their step buttons wrap as one unit. */
+  .dates {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .step {
+    padding: 0 6px;
+    font-size: 15px;
+    line-height: 1;
     color: var(--fg);
   }
 
-  .chk[aria-checked='false'] {
-    color: var(--dim);
+  .step:hover:not([aria-disabled='true']) {
+    color: var(--accent);
   }
 
-  .chk:hover:not(:disabled) .box {
-    text-shadow: 0 0 6px currentColor;
+  /* The scoped .step color outranks the global disabled rule, so the disabled look is repeated here. */
+  .step[aria-disabled='true'] {
+    color: var(--dimmer);
   }
 
-  .box {
-    white-space: pre;
-    font-weight: 700;
+  .chk:hover:not(:disabled) {
+    color: var(--accent);
+  }
+
+  .chk:disabled {
+    cursor: not-allowed;
   }
 </style>

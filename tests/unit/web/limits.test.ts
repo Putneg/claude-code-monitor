@@ -34,11 +34,11 @@ describe('limitViews', () => {
     expect(limitViews([limit()], NOW, 'UTC')).toEqual([
       {
         id: 'codex:codex',
-        title: 'codex limits · prolite',
+        title: 'Codex limits · prolite',
         asOf: 'as of 08:12',
         windows: [
-          { key: 'primary', label: 'weekly', bar: '▓▓▓▓▓▓▓░░░', percent: '66%', resets: 'resets 09-18 09:30', stale: false },
-          { key: 'secondary', label: '5h', bar: '░░░░░░░░░░', percent: '1%', resets: 'resets 12:21', stale: false },
+          { key: 'primary', label: 'weekly', used: 66.4, percent: '66%', resets: 'resets 09-18 09:30', stale: false, hot: false },
+          { key: 'secondary', label: '5h', used: 1, percent: '1%', resets: 'resets 12:21', stale: false, hot: false },
         ],
         credits: null,
       },
@@ -52,7 +52,7 @@ describe('limitViews', () => {
       'UTC',
     );
     expect(view[0]?.windows).toEqual([
-      { key: 'primary', label: '5h', bar: '░░░░░░░░░░', percent: '', resets: 'reset · no newer data', stale: true },
+      { key: 'primary', label: '5h', used: 0, percent: '', resets: 'reset · no newer data', stale: true, hot: false },
     ]);
   });
 
@@ -63,7 +63,7 @@ describe('limitViews', () => {
 
   it('names a non-default limit and an older reading, and leaves out a missing plan', () => {
     const view = limitViews([limit({ limitId: 'premium', planType: null, observedAt: '2026-09-14T08:49:51.000Z' })], NOW, 'UTC');
-    expect(view[0]).toMatchObject({ id: 'codex:premium', title: 'codex limits · premium', asOf: 'as of 09-14 08:49' });
+    expect(view[0]).toMatchObject({ id: 'codex:premium', title: 'Codex limits · premium', asOf: 'as of 09-14 08:49' });
   });
 
   it('shows the time zone of the server', () => {
@@ -94,24 +94,24 @@ describe('claudeLimitView', () => {
   it('labels the windows and keeps their order', () => {
     expect(claudeLimitView(claude(), NOW, 'UTC')).toEqual({
       id: 'claude',
-      title: 'claude limits',
+      title: 'Claude limits',
       asOf: 'as of 08:10',
       windows: [
-        { key: 'five_hour', label: '5h', bar: '▓▓░░░░░░░░', percent: '23%', resets: 'resets 12:00', stale: false },
-        { key: 'seven_day', label: 'weekly', bar: '▓▓▓▓░░░░░░', percent: '42%', resets: 'resets 09-19 07:00', stale: false },
+        { key: 'five_hour', label: '5h', used: 23.4, percent: '23%', resets: 'resets 12:00', stale: false, hot: false },
+        { key: 'seven_day', label: 'weekly', used: 41.6, percent: '42%', resets: 'resets 09-19 07:00', stale: false, hot: false },
       ],
       credits: null,
     });
   });
 
-  it('shows a spend window above 100% with a full bar', () => {
+  it('shows a spend window above 100% with a full, hot scale', () => {
     const view = claudeLimitView(
       claude({ windows: [{ kind: 'spend_limit', usedPercent: 130, resetsAt: '2026-10-01T00:00:00.000Z' }] }),
       NOW,
       'UTC',
     );
     expect(view.windows).toEqual([
-      { key: 'spend_limit', label: 'spend', bar: '▓▓▓▓▓▓▓▓▓▓', percent: '130%', resets: 'resets 10-01 00:00', stale: false },
+      { key: 'spend_limit', label: 'spend', used: 100, percent: '130%', resets: 'resets 10-01 00:00', stale: false, hot: true },
     ]);
   });
 
@@ -122,8 +122,15 @@ describe('claudeLimitView', () => {
       'UTC',
     );
     expect(view.windows).toEqual([
-      { key: 'five_hour', label: '5h', bar: '░░░░░░░░░░', percent: '', resets: 'reset · no newer data', stale: true },
+      { key: 'five_hour', label: '5h', used: 0, percent: '', resets: 'reset · no newer data', stale: true, hot: false },
     ]);
+  });
+  it('turns hot at 80% and not before', () => {
+    const at = (usedPercent: number) =>
+      claudeLimitView(claude({ windows: [{ kind: 'five_hour', usedPercent, resetsAt: '2026-09-16T12:00:00.000Z' }] }), NOW, 'UTC')
+        .windows[0];
+    expect(at(79.9)).toMatchObject({ hot: false, percent: '80%' });
+    expect(at(80)).toMatchObject({ hot: true, percent: '80%' });
   });
 });
 

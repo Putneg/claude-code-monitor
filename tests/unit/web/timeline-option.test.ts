@@ -18,7 +18,12 @@ import { SERIES } from './fixtures.js';
 type LabelAxis<T> = { axisLabel: { formatter: (value: T) => string } };
 
 const seriesOf = (option: TimelineOption): LineSeriesOption[] => option.series as LineSeriesOption[];
-const xFormatter = (option: TimelineOption) => (option.xAxis as LabelAxis<string>).axisLabel.formatter;
+const xAxes = (option: TimelineOption) => option.xAxis as (LabelAxis<string> & Record<string, unknown>)[];
+const xFormatter = (option: TimelineOption) => xAxes(option)[0]?.axisLabel.formatter ?? ((value: string) => value);
+/** The stacked areas, drawn on the hidden edge axis. */
+const drawnOf = (option: TimelineOption) => seriesOf(option).filter((line) => line.xAxisIndex === 1);
+/** The invisible per-key value lines the tooltip reads, on the visible axis. */
+const valuesOf = (option: TimelineOption) => seriesOf(option).filter((line) => String(line.id).startsWith('value:'));
 
 /** One model over `count` day buckets, with the largest value at `peakIndex`. */
 function seriesPeakingAt(peakIndex: number, count: number): OverviewSeries {
@@ -33,36 +38,54 @@ function seriesPeakingAt(peakIndex: number, count: number): OverviewSeries {
 }
 
 const peakLabel = (series: OverviewSeries) =>
-  seriesOf(buildTimelineOption(series, { unit: 'usd', cumulative: false })).at(-1)?.markPoint?.label;
+  valuesOf(buildTimelineOption(series, { unit: 'usd', cumulative: false })).at(-1)?.markPoint?.label;
 
 describe('buildTimelineOption', () => {
-  it('stacks one stepped, glowing area per key', () => {
-    const [opus, sonnet] = seriesOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }));
+  it('stacks one stepped, glowing area per key on the hidden edge axis, the last value repeated', () => {
+    const [opus, sonnet] = drawnOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }));
     expect(opus).toMatchObject({
       name: 'opus-5',
       type: 'line',
-      step: 'middle',
+      xAxisIndex: 1,
+      step: 'end',
       stack: 'total',
-      data: [1, 4, 0],
+      silent: true,
+      data: [1, 4, 0, 0],
       areaStyle: { color: '#FFB000', opacity: AREA_OPACITY },
       lineStyle: { shadowBlur: GLOW_BLUR, shadowColor: '#FFB000' },
     });
+    expect(sonnet).toMatchObject({ name: 'sonnet-5', data: [2, 1, 0, 0] });
+  });
+
+  it('draws every bucket as a full band: the edge axis has one category more and no boundary gap', () => {
+    const [visible, edges] = xAxes(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }));
+    expect(visible).toMatchObject({ type: 'category', data: SERIES.buckets, boundaryGap: true });
+    expect(edges).toMatchObject({ type: 'category', boundaryGap: false, show: false, axisPointer: { show: false, triggerTooltip: false } });
+    expect(edges?.data).toHaveLength(SERIES.buckets.length + 1);
+  });
+
+  it('gives the tooltip one invisible line per key with its own values on the visible axis', () => {
+    const [opus, sonnet] = valuesOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }));
+    expect(opus).toMatchObject({ name: 'opus-5', data: [1, 4, 0], itemStyle: { color: '#FFB000' }, lineStyle: { opacity: 0 } });
+    expect(opus?.xAxisIndex ?? 0).toBe(0);
+    expect(opus?.stack).toBeUndefined();
     expect(sonnet).toMatchObject({ name: 'sonnet-5', data: [2, 1, 0] });
   });
 
   it('plots tokens in token mode', () => {
-    const [opus] = seriesOf(buildTimelineOption(SERIES, { unit: 'tok', cumulative: false }));
-    expect(opus?.data).toEqual([100, 400, 0]);
+    const option = buildTimelineOption(SERIES, { unit: 'tok', cumulative: false });
+    expect(drawnOf(option)[0]?.data).toEqual([100, 400, 0, 0]);
+    expect(valuesOf(option)[0]?.data).toEqual([100, 400, 0]);
   });
 
   it('adds a dashed cumulative line on the right axis only when enabled', () => {
     const lines = seriesOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: true }));
     expect(lines.at(-1)).toMatchObject({ name: CUMULATIVE_NAME, yAxisIndex: 1, data: [3, 8, 8], lineStyle: { type: 'dashed' } });
-    expect(seriesOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }))).toHaveLength(2);
+    expect(seriesOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }))).toHaveLength(4);
   });
 
   it('marks the peak on the top series', () => {
-    const [opus, sonnet] = seriesOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }));
+    const [opus, sonnet] = valuesOf(buildTimelineOption(SERIES, { unit: 'usd', cumulative: false }));
     expect(opus?.markPoint).toBeUndefined();
     expect(sonnet?.markPoint).toMatchObject({
       data: [{ coord: ['2026-03-02', 5], value: 5 }],
@@ -87,7 +110,7 @@ describe('buildTimelineOption', () => {
     const option = buildTimelineOption(SERIES, { unit: 'usd', cumulative: true });
     expect(option.brush).toMatchObject({ xAxisIndex: 0, brushType: 'lineX', brushMode: 'single' });
     expect(option.toolbox).toEqual({ show: false });
-    expect(option.xAxis).toMatchObject({ type: 'category', data: SERIES.buckets, boundaryGap: true });
+    expect(xAxes(option)[0]).toMatchObject({ type: 'category', data: SERIES.buckets, boundaryGap: true });
     expect(xFormatter(option)('2026-03-02')).toBe('03-02');
     const [left] = option.yAxis as LabelAxis<number>[];
     expect(left?.axisLabel.formatter(1_500)).toBe('$1.5k');
@@ -105,16 +128,18 @@ describe('buildTimelineOption', () => {
       cost: [...SERIES.cost, [0, 0, 0]],
       tokens: [...SERIES.tokens, [0, 0, 0]],
     };
-    expect(seriesOf(buildTimelineOption(three, { unit: 'usd', cumulative: true })).map((line) => line.z)).toEqual([4, 3, 2, 1]);
+    const option = buildTimelineOption(three, { unit: 'usd', cumulative: true });
+    expect(drawnOf(option).map((line) => line.z)).toEqual([4, 3, 2]);
+    expect(seriesOf(option).at(-1)).toMatchObject({ name: CUMULATIVE_NAME, z: 1 });
   });
 
   it('keeps the peak marker above every stacked line', () => {
     const keys = Array.from({ length: 9 }, (_, index) => ({ key: `k${index}`, label: `p${index}`, color: '#FFB000' }));
     const values = keys.map((_, index) => [index + 1, 1]);
     const many: OverviewSeries = { stack: 'project', buckets: ['2026-03-01', '2026-03-02'], keys, cost: values, tokens: values };
-    const lines = seriesOf(buildTimelineOption(many, { unit: 'usd', cumulative: false }));
-    expect(lines.map((line) => line.z)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2]);
-    expect(lines.at(-1)?.markPoint?.z).toBe(11);
+    const option = buildTimelineOption(many, { unit: 'usd', cumulative: false });
+    expect(drawnOf(option).map((line) => line.z)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2]);
+    expect(valuesOf(option).at(-1)?.markPoint?.z).toBe(11);
   });
 
   it('moves the tooltip without a CSS transition', () => {
@@ -197,5 +222,13 @@ describe('timelineSummary', () => {
 
   it('copes with a series without buckets', () => {
     expect(timelineSummary({ ...SERIES, buckets: [], cost: [[], []], tokens: [[], []] }, 'tok')).toBe('usage over time, no buckets');
+  });
+});
+
+describe('chart font', () => {
+  it('draws every text in IBM Plex Sans', () => {
+    expect(CHART_THEME.font).toBe("'IBM Plex Sans', system-ui, sans-serif");
+    const option = buildTimelineOption(SERIES, { unit: 'usd', cumulative: true });
+    expect(option.textStyle).toMatchObject({ fontFamily: CHART_THEME.font });
   });
 });

@@ -116,8 +116,8 @@
               title={project.path}
               onclick={() => onChange(toggleProject(selected, project.id))}
             >
-              <span class="box" aria-hidden="true">[{checked ? 'x' : ' '}]</span>
-              {project.label}
+              <span class="sq" class:off={!checked} style:--sq="var(--accent)" aria-hidden="true"></span>
+              <span class="ut">{project.label}</span>
             </button>
           </li>
         {:else}
@@ -136,6 +136,7 @@
 
   .dd {
     border: 1px solid var(--line);
+    border-radius: 3px;
     padding: 1px 8px;
     color: var(--fg);
   }
@@ -174,6 +175,7 @@
 
   .item {
     display: flex;
+    align-items: center;
     gap: 6px;
     width: 100%;
     padding: 2px 4px;
@@ -194,11 +196,6 @@
 
   .item[aria-checked='false'] {
     color: var(--dim);
-  }
-
-  .box {
-    white-space: pre;
-    color: var(--accent);
   }
 
   .none {

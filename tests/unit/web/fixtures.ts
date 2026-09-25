@@ -63,6 +63,7 @@ export function makeOverview(overrides: Partial<OverviewResponse> = {}): Overvie
     byModel: [],
     byProject: [],
     byClient: [{ client: 'claude', label: 'claude code', color: '#FFB000', tokensTotal: 1_250, cost: 8, share: 1 }],
+    modelsInRange: ['claude-opus-5', 'claude-sonnet-5'],
     ...overrides,
   };
 }

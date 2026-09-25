@@ -8,6 +8,8 @@ import {
   rangeLabel,
   requestBucket,
   resolveRange,
+  shiftRange,
+  shiftSide,
 } from '../../../src/web/lib/range.js';
 import { DEFAULT_VIEW } from '../../../src/web/lib/view-state.js';
 import { MAX_RANGE_DAYS } from '../../../src/shared/limits.js';
@@ -77,9 +79,10 @@ describe('buckets', () => {
 });
 
 describe('rangeLabel', () => {
-  it('names presets and prints custom dates', () => {
+  it('names presets and prints custom dates, a single day once', () => {
     expect(rangeLabel(DEFAULT_VIEW, { from: '2026-08-13', to: '2026-09-11' })).toBe('30d');
     expect(rangeLabel({ ...DEFAULT_VIEW, range: null }, { from: '2026-03-01', to: '2026-03-14' })).toBe('03-01 → 03-14');
+    expect(rangeLabel({ ...DEFAULT_VIEW, range: null }, { from: '2026-03-14', to: '2026-03-14' })).toBe('03-14');
   });
 });
 
@@ -110,5 +113,67 @@ describe('brushRange', () => {
 
   it('returns null without buckets', () => {
     expect(brushRange([], 0, 1)).toBeNull();
+  });
+});
+
+describe('shiftRange', () => {
+  const bounds = { today: '2026-09-25', firstDay: '2026-08-11' };
+
+  it('steps a single day back to yesterday and forward to today', () => {
+    expect(shiftRange('today', { from: '2026-09-25', to: '2026-09-25' }, 'back', bounds)).toEqual({ from: '2026-09-24', to: '2026-09-24' });
+    expect(shiftRange(null, { from: '2026-09-24', to: '2026-09-24' }, 'forward', bounds)).toEqual({ from: '2026-09-25', to: '2026-09-25' });
+  });
+
+  it('steps 7 and 30 days by their own length', () => {
+    expect(shiftRange('7d', { from: '2026-09-19', to: '2026-09-25' }, 'back', bounds)).toEqual({ from: '2026-09-12', to: '2026-09-18' });
+    expect(shiftRange('30d', { from: '2026-08-27', to: '2026-09-25' }, 'back', bounds)).toEqual({ from: '2026-07-28', to: '2026-08-26' });
+  });
+
+  it('may step into days before the history, but not from its first day', () => {
+    expect(shiftRange(null, { from: '2026-07-28', to: '2026-08-26' }, 'back', bounds)).toBeNull();
+    expect(shiftRange(null, { from: '2026-08-11', to: '2026-08-17' }, 'back', bounds)).toBeNull();
+    expect(shiftRange(null, { from: '2026-08-12', to: '2026-08-18' }, 'back', bounds)).toEqual({ from: '2026-08-05', to: '2026-08-11' });
+  });
+
+  it('never steps back without history or past the earliest query day', () => {
+    expect(shiftRange('7d', { from: '2026-09-19', to: '2026-09-25' }, 'back', { ...bounds, firstDay: null })).toBeNull();
+    expect(shiftRange(null, { from: '2000-01-03', to: '2000-01-09' }, 'back', { ...bounds, firstDay: '1999-01-01' })).toBeNull();
+  });
+
+  it('ends a forward step at today and refuses one that already ends there', () => {
+    expect(shiftRange(null, { from: '2026-09-17', to: '2026-09-23' }, 'forward', bounds)).toEqual({ from: '2026-09-19', to: '2026-09-25' });
+    expect(shiftRange('7d', { from: '2026-09-19', to: '2026-09-25' }, 'forward', bounds)).toBeNull();
+  });
+
+  it('has no neighbour for "all"', () => {
+    expect(shiftRange('all', { from: '2026-08-11', to: '2026-09-25' }, 'back', bounds)).toBeNull();
+    expect(shiftRange('all', { from: '2026-08-11', to: '2026-09-25' }, 'forward', bounds)).toBeNull();
+  });
+});
+
+describe('shiftSide', () => {
+  const bounds = { today: '2026-09-25', firstDay: '2026-08-11' };
+
+  it('names the step for screen readers', () => {
+    expect(shiftSide('7d', { from: '2026-09-19', to: '2026-09-25' }, 'back', bounds)).toEqual({
+      allowed: true,
+      reason: null,
+      label: 'previous 7 days',
+    });
+    expect(shiftSide('today', { from: '2026-09-25', to: '2026-09-25' }, 'back', bounds).label).toBe('previous day');
+    expect(shiftSide(null, { from: '2026-09-23', to: '2026-09-23' }, 'forward', bounds).label).toBe('next day');
+  });
+
+  it('explains why a side is unavailable', () => {
+    expect(shiftSide(null, { from: '2026-08-11', to: '2026-08-17' }, 'back', bounds).reason).toBe('history starts 08-11');
+    expect(shiftSide('7d', { from: '2026-09-19', to: '2026-09-25' }, 'back', { ...bounds, firstDay: null }).reason).toBe('no history yet');
+    expect(shiftSide('7d', { from: '2026-09-19', to: '2026-09-25' }, 'forward', bounds)).toMatchObject({
+      allowed: false,
+      reason: 'already at today',
+    });
+    expect(shiftSide('all', { from: '2026-08-11', to: '2026-09-25' }, 'back', bounds)).toMatchObject({
+      allowed: false,
+      reason: 'the all range has no neighbour',
+    });
   });
 });

@@ -167,6 +167,21 @@ describe('overview composition', () => {
     expect(overview.byProject).toHaveLength(2);
   });
 
+  it('lists the models used in the period, ignoring the model, project and client filters', () => {
+    const options = { bucket: 'day', stack: 'model', timeZone: 'UTC', dataFirstDay: '2026-09-09' } as const;
+    const filtered = queryOverview(
+      scenario(),
+      range('2026-09-11', '2026-09-11', { models: ['claude-opus-5'], clients: ['codex'] }),
+      options,
+    );
+    expect(filtered.modelsInRange).toEqual(['claude-fable-5-1', 'claude-mystery']);
+    expect(queryOverview(scenario(), range('2026-09-09', '2026-09-10'), options).modelsInRange).toEqual([
+      'claude-opus-5',
+      'claude-sonnet-5',
+    ]);
+    expect(queryOverview(scenario(), range('2026-01-01', '2026-01-02'), options).modelsInRange).toEqual([]);
+  });
+
   it('reports the previous period cost when it is fully covered', () => {
     const overview = queryOverview(scenario(), range('2026-09-11', '2026-09-11'), {
       bucket: 'day',

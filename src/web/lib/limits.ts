@@ -1,9 +1,8 @@
 import type { ClaudeLimit, ClaudeLimitKind, CodexLimit, StatusResponse } from '../../shared/api.js';
 import { formatStamp, formatTimeOfDay, zonedDay } from './format.js';
-import { progressBar } from './status-view.js';
 
-/** Character cells of a window's usage bar. */
-export const LIMIT_CELLS = 10;
+/** From this usage on a window is shown in the warning color. */
+export const LIMIT_HOT_PERCENT = 80;
 const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 1_440;
 const MINUTES_PER_WEEK = 10_080;
@@ -13,12 +12,14 @@ const CLAUDE_WINDOW_LABELS: Readonly<Record<ClaudeLimitKind, string>> = { five_h
 export interface LimitWindowView {
   readonly key: string;
   readonly label: string;
-  /** Decorative; the percentage carries the value. */
-  readonly bar: string;
+  /** Scale position, 0-100 (a spend window above 100% is drawn full); 0 when stale. Decorative: `percent` carries the value. */
+  readonly used: number;
   readonly percent: string;
   readonly resets: string;
   /** The window has reset since the reading, so its usage is unknown. */
   readonly stale: boolean;
+  /** At or above LIMIT_HOT_PERCENT and not stale. */
+  readonly hot: boolean;
 }
 
 export interface LimitView {
@@ -54,15 +55,16 @@ function moment(iso: string, nowIso: string, timeZone: string): string {
 function windowView(window: WindowReading, nowIso: string, timeZone: string): LimitWindowView {
   const { key, label } = window;
   if (window.resetsAt !== null && Date.parse(window.resetsAt) <= Date.parse(nowIso)) {
-    return { key, label, bar: progressBar(0, 100, LIMIT_CELLS), percent: '', resets: STALE_TEXT, stale: true };
+    return { key, label, used: 0, percent: '', resets: STALE_TEXT, stale: true, hot: false };
   }
   return {
     key,
     label,
-    bar: progressBar(window.usedPercent, 100, LIMIT_CELLS),
+    used: Math.min(Math.max(window.usedPercent, 0), 100),
     percent: `${Math.round(window.usedPercent)}%`,
     resets: window.resetsAt === null ? '' : `resets ${moment(window.resetsAt, nowIso, timeZone)}`,
     stale: false,
+    hot: window.usedPercent >= LIMIT_HOT_PERCENT,
   };
 }
 
@@ -73,7 +75,7 @@ function creditsText(limit: CodexLimit): string | null {
 }
 
 function titleOf(limit: CodexLimit): string {
-  const parts = ['codex limits', limit.limitId === 'codex' ? null : limit.limitId, limit.planType];
+  const parts = ['Codex limits', limit.limitId === 'codex' ? null : limit.limitId, limit.planType];
   return parts.filter((part): part is string => part !== null && part.length > 0).join(' · ');
 }
 
@@ -98,7 +100,7 @@ export function limitViews(limits: readonly CodexLimit[], nowIso: string, timeZo
 export function claudeLimitView(limit: ClaudeLimit, nowIso: string, timeZone: string): LimitView {
   return {
     id: 'claude',
-    title: 'claude limits',
+    title: 'Claude limits',
     asOf: `as of ${moment(limit.observedAt, nowIso, timeZone)}`,
     windows: limit.windows.map((window) =>
       windowView(

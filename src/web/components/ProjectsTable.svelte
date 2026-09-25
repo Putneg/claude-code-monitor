@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ProjectBreakdown } from '../../shared/api';
   import { projectRows } from '../lib/tables';
+  import Meter from './Meter.svelte';
 
   interface Props {
     rows: readonly ProjectBreakdown[];
@@ -13,7 +14,7 @@
 </script>
 
 <section class="sec" data-testid="projects-table">
-  <h2 class="cap">projects · top 8 by cost <span class="hint">· click a row to filter</span></h2>
+  <h2 class="cap">Projects <span class="dim">top 8 by cost · click a row to filter</span></h2>
   {#if items.length === 0}
     <p class="none">no project information in this range</p>
   {:else}
@@ -33,8 +34,8 @@
               title={item.path}
               onclick={() => onToggle(item.id)}
             >
-              <span class="label">{item.label}</span>
-              <span class="track"><span class="fill" style:width="{item.barPct}%"></span></span>
+              <span class="label ut">{item.label}</span>
+              <Meter share={item.barPct / 100} />
               <span class="r">{item.cost}</span>
               <span class="r dim">{item.tokens}</span>
               <span class="r dim">{item.sessions}</span>
@@ -49,12 +50,6 @@
 <style>
   .cap {
     margin-bottom: 4px;
-  }
-
-  .hint {
-    color: var(--dim);
-    text-transform: none;
-    letter-spacing: 0;
   }
 
   .none {
@@ -81,15 +76,13 @@
     min-width: 360px;
     padding: 4px 6px;
     text-align: left;
-    font-size: 11.5px;
-    border-bottom: 1px dashed var(--line-soft);
+    font-size: 12px;
+    border-bottom: 1px solid var(--line-soft);
   }
 
   .head {
     color: var(--dim);
-    font-size: 10.5px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 11.5px;
     border-bottom: 1px solid var(--line);
   }
 
@@ -115,16 +108,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .track {
-    display: block;
-  }
-
-  .fill {
-    display: block;
-    height: 8px;
-    background: linear-gradient(90deg, #ffb000, #ffb00088);
   }
 
   .r {

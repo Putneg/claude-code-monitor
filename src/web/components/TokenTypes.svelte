@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { OverviewTotals } from '../../shared/api';
   import { formatPercent } from '../lib/format';
-  import { asciiBar, tokenInsights, tokenTypeRows } from '../lib/token-types';
+  import { tokenInsights, tokenTypeRows } from '../lib/token-types';
+  import Meter from './Meter.svelte';
 
   interface Props {
     totals: OverviewTotals;
@@ -13,7 +14,7 @@
 </script>
 
 <div class="types" data-testid="token-types">
-  <h2 class="cap">token types · tokens vs cost</h2>
+  <h2 class="cap">Token types <span class="dim">tokens vs cost</span></h2>
   <table>
     <thead>
       <tr><th>type</th><th colspan="2">tokens</th><th colspan="2">cost</th></tr>
@@ -22,9 +23,9 @@
       {#each rows as row (row.key)}
         <tr>
           <td class="name">{row.label}</td>
-          <td class="bar-tokens"><span aria-hidden="true">{asciiBar(row.tokenShare)}</span></td>
+          <td class="bar"><Meter share={row.tokenShare} color="var(--cyan)" /></td>
           <td class="pct">{formatPercent(row.tokenShare)}</td>
-          <td class="bar-cost"><span aria-hidden="true">{asciiBar(row.costShare)}</span></td>
+          <td class="bar"><Meter share={row.costShare} /></td>
           <td class="pct">{formatPercent(row.costShare)}</td>
         </tr>
       {/each}
@@ -46,8 +47,9 @@
   }
 
   table {
+    width: 100%;
     border-collapse: collapse;
-    font-size: 11.5px;
+    font-size: 12px;
     line-height: 1.75;
   }
 
@@ -55,12 +57,12 @@
     padding: 0 10px 0 0;
     text-align: left;
     font-weight: 400;
-    color: var(--fg);
+    color: var(--dim);
   }
 
   td {
     padding: 0 10px 0 0;
-    white-space: pre;
+    white-space: nowrap;
   }
 
   .name {
@@ -68,17 +70,9 @@
     color: var(--fg);
   }
 
-  .bar-tokens,
-  .bar-cost {
-    width: 25ch;
-  }
-
-  .bar-tokens {
-    color: var(--cyan);
-  }
-
-  .bar-cost {
-    color: var(--accent);
+  .bar {
+    width: 40%;
+    min-width: 12ch;
   }
 
   .pct {
@@ -90,7 +84,7 @@
   .insight {
     margin: 0;
     color: var(--dim);
-    font-size: 11.5px;
+    font-size: 12px;
   }
 
   .insight:first-of-type {

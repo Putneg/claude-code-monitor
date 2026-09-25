@@ -181,13 +181,14 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### JetBrains Mono (via @fontsource/jetbrains-mono 5.3.0)
+### IBM Plex Sans (via @fontsource/ibm-plex-sans 5.3.0) and IBM Plex Mono (via @fontsource/ibm-plex-mono 5.3.0)
 
-The `.woff` and `.woff2` files under `dist/web/assets` are subsets of the JetBrains Mono font
-(https://github.com/JetBrains/JetBrainsMono), under the SIL Open Font License 1.1:
+The `.woff` and `.woff2` files under `dist/web/assets` are latin and cyrillic subsets of the IBM Plex Sans and
+IBM Plex Mono fonts (https://github.com/IBM/plex), under the SIL Open Font License 1.1:
 
 ```text
-Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+Copyright 2017 IBM Corp. All rights reserved. (IBM Plex Mono)
+Copyright 2019 IBM Corp. All rights reserved. (IBM Plex Sans)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

@@ -2,6 +2,7 @@
   import type { Day, OverviewResponse } from '../../shared/api';
   import { heroView } from '../lib/hero';
   import type { Unit } from '../lib/view-state';
+  import DrumNumber from './DrumNumber.svelte';
 
   interface Props {
     overview: OverviewResponse;
@@ -16,7 +17,9 @@
 
 <div class="spend" data-testid="spend-hero">
   <h2 class="cap">{hero.caption}</h2>
-  <div class="num" data-testid="hero-main">{hero.main}</div>
+  <div class="readout" class:long={hero.main.length > 10}>
+    <DrumNumber text={hero.main} testid="hero-main" />
+  </div>
   <dl class="kv">
     {#each hero.rows as row (row.label)}
       <dt>{row.label}</dt>
@@ -32,15 +35,48 @@
     min-width: 0;
   }
 
-  .num {
-    margin: 6px 0 10px;
-    font-size: 42px;
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+  /* The caption is a dim label here, not a section title. */
+  .spend .cap {
+    color: var(--dim);
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  /* Framed readout with a pointer on the right, like an airspeed box. */
+  .readout {
+    position: relative;
+    display: inline-flex;
+    margin: 6px 12px 12px 0;
+    padding: 1px 14px 1px 10px;
+    border: 1.5px solid var(--frame);
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
     color: var(--accent);
-    text-shadow: 0 0 18px var(--accent-glow);
-    font-variant-numeric: tabular-nums;
+  }
+
+  .readout.long {
+    font-size: 30px;
+  }
+
+  .readout::before,
+  .readout::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 11px solid transparent;
+    border-right: 0;
+  }
+
+  .readout::before {
+    right: -12px;
+    border-left-color: var(--frame);
+  }
+
+  .readout::after {
+    right: -9.5px;
+    border-left-color: var(--bg);
   }
 
   .kv {
@@ -48,7 +84,7 @@
     grid-template-columns: auto 1fr;
     gap: 3px 12px;
     margin: 0;
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--dim);
   }
 

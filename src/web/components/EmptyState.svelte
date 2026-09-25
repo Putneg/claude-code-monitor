@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { StatusResponse } from '../../shared/api';
   import { formatBytes } from '../lib/format';
-  import { progressBar, visibleSources, type EmptyKind } from '../lib/status-view';
+  import { progressShare, visibleSources, type EmptyKind } from '../lib/status-view';
+  import Meter from './Meter.svelte';
 
   interface Props {
     kind: EmptyKind | 'loading' | 'error';
@@ -25,7 +26,7 @@
     <p class="title">backfill in progress</p>
     {#if backfill !== null && backfill.filesTotal > 0}
       <p class="progress">
-        <span class="meter">{progressBar(backfill.bytesDone, backfill.bytesTotal, 24)}</span>
+        <span class="meter"><Meter share={progressShare(backfill.bytesDone, backfill.bytesTotal)} /></span>
         <span class="note">
           {backfill.filesDone}/{backfill.filesTotal} files · {formatBytes(backfill.bytesDone)} / {formatBytes(backfill.bytesTotal)}
         </span>
@@ -80,8 +81,9 @@
   }
 
   .meter {
-    color: var(--accent);
-    letter-spacing: 1px;
+    display: inline-block;
+    width: 240px;
+    align-self: center;
   }
 
   ul {

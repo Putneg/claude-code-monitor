@@ -86,7 +86,7 @@ test('shows the Claude limits above the Codex limits', async ({ page }) => {
     .getByTestId('rate-limits')
     .getByRole('group')
     .evaluateAll((groups) => groups.map((group) => group.getAttribute('aria-label')));
-  expect(titles).toEqual(['claude limits', 'codex limits · plus']);
+  expect(titles).toEqual(['Claude limits', 'Codex limits · plus']);
   await page.screenshot({ path: `${SCREENS}/limits.png`, fullPage: true });
   expect(problems).toEqual([]);
 });
@@ -107,6 +107,6 @@ test('counts nothing from the imported session and shows no warnings', async ({ 
   const filters = (await (await page.request.get('/api/filters')).json()) as FiltersResponse;
   expect(filters.clients.map((client) => client.id)).toEqual(['claude', 'codex']);
   await page.goto(RANGE);
-  await expect(page.getByTestId('status-bar')).toContainText('● live');
+  await expect(page.getByRole('status')).toHaveText('live');
   await expect(page.getByTestId('status-bar')).not.toContainText('⚠');
 });

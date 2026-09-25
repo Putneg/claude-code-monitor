@@ -72,7 +72,8 @@ const FILES: Readonly<Record<string, readonly string[]>> = {
       // Two web searches ($0.01 each): the hero shows a web search row for ranges that include 03-10.
       usage: { input: 5_000, output: 40_000, cacheRead: 200_000, webSearchRequests: 2 },
     }),
-    titleLine('e2e-s2', 'Write the dashboard tests'),
+    // A Cyrillic title ("Dashboard tests"), written with escapes: the repository allows no Cyrillic characters.
+    titleLine('e2e-s2', '\u0422\u0435\u0441\u0442\u044b \u0434\u0430\u0448\u0431\u043e\u0440\u0434\u0430'),
   ],
   '-home-dev-alpha/e2e-s3.jsonl': [
     assistantLine({

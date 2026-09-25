@@ -230,6 +230,11 @@ export interface OverviewResponse {
   readonly byProject: readonly ProjectBreakdown[];
   /** Clients in range, sorted by cost descending. */
   readonly byClient: readonly ClientBreakdown[];
+  /**
+   * Ids of the models with usage in the period, sorted. Only the period counts: the model, project and client filters
+   * are ignored, so the model list in the filter bar never hides a model that was just unchecked.
+   */
+  readonly modelsInRange: readonly string[];
 }
 
 export interface SessionSummary {

@@ -5,7 +5,7 @@
   import { historyAction } from './lib/history';
   import { statusLimitViews } from './lib/limits';
   import { changeKey, decideLoad, POLL_INTERVAL_MS, startPolling, type LoadMark } from './lib/poll';
-  import { dayBucketAllowed, hourBucketAllowed, rangeLabel, resolveRange } from './lib/range';
+  import { dayBucketAllowed, hourBucketAllowed, rangeLabel, resolveRange, shiftRange, type ShiftDirection } from './lib/range';
   import { dataRequest, type DataRequest } from './lib/request';
   import { emptyStateKind } from './lib/status-view';
   import {
@@ -13,10 +13,12 @@
     parseViewState,
     serializeViewState,
     toggleProject,
+    visibleModels,
     visibleStacks,
     withCustomRange,
     withPreset,
     withSettings,
+    withShiftedRange,
     type RangePreset,
     type ViewSettings,
     type ViewState,
@@ -56,6 +58,10 @@
   const shown = $derived(effectiveView(view, available));
   const request = $derived(range === null ? null : dataRequest(shown, range));
   const empty = $derived(status === null ? null : emptyStateKind(status, overview));
+  /** The filter bar lists the models used in the period, plus any the view has checked. */
+  const shownModels = $derived(
+    filters === null ? [] : visibleModels(filters.models, overview === null ? null : overview.modelsInRange, view.models),
+  );
   /** The Claude and Codex rate-limit blocks; none until a reading exists. */
   const limitBlocks = $derived(status === null ? [] : statusLimitViews(status));
 
@@ -154,6 +160,12 @@
   function setSettings(patch: Partial<ViewSettings>): void {
     view = withSettings(view, patch);
   }
+
+  function shiftBy(direction: ShiftDirection): void {
+    if (range === null || status === null || filters === null) return;
+    const next = shiftRange(view.range, range, direction, { today: status.today, firstDay: filters.bounds.firstDay });
+    if (next !== null) view = withShiftedRange(view, next, status.today);
+  }
 </script>
 
 <div class="page">
@@ -169,12 +181,13 @@
         {range}
         today={status.today}
         firstDay={filters.bounds.firstDay}
-        models={filters.models}
+        models={shownModels}
         projects={filters.projects}
         clients={filters.clients}
         onPreset={setPreset}
         onCustomRange={setCustomRange}
         onSettings={setSettings}
+        onShift={shiftBy}
       />
       {#if loadError !== null}
         <p class="load-error" role="alert">⚠ {loadError}</p>

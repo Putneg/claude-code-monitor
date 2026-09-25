@@ -17,7 +17,9 @@ const PORT = portFrom('E2E_PORT', '8740');
 const CODEX_PORT = portFrom('E2E_CODEX_PORT', '8741');
 if (PORT === CODEX_PORT) throw new Error('E2E_PORT and E2E_CODEX_PORT must differ');
 
-const browser = { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } };
+// Reduced motion: the hero digits and the limit markers stand still, so assertions and reviewer screenshots never catch
+// them mid-roll. The test of the motion itself turns it back on.
+const browser = { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' as const };
 
 function fixtureServer(port: number, fixture: 'claude' | 'mixed') {
   return {

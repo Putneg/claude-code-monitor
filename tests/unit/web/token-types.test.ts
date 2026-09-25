@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asciiBar, tokenInsights, tokenTypeRows } from '../../../src/web/lib/token-types.js';
+import { tokenInsights, tokenTypeRows } from '../../../src/web/lib/token-types.js';
 import { makeOverview } from './fixtures.js';
 
 describe('tokenTypeRows', () => {
@@ -32,17 +32,6 @@ describe('tokenTypeRows', () => {
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, webSearch: 0, total: 0 },
     };
     expect(tokenTypeRows(empty).every((row) => row.tokenShare === 0 && row.costShare === 0)).toBe(true);
-  });
-});
-
-describe('asciiBar', () => {
-  it('draws full cells, a half cell and a sliver', () => {
-    expect(asciiBar(1)).toBe('█'.repeat(24));
-    expect(asciiBar(0.5)).toBe('█'.repeat(12));
-    expect(asciiBar(0.27, 10)).toBe('██▌');
-    expect(asciiBar(0.01)).toBe('▏');
-    expect(asciiBar(0)).toBe('');
-    expect(asciiBar(3)).toBe('█'.repeat(24));
   });
 });
 

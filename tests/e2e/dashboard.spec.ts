@@ -30,7 +30,7 @@ test('shows totals for the fixture range', async ({ page }) => {
   await page.goto(`${RANGE}&unit=tok`);
   await expect(page.getByTestId('hero-main')).toHaveText(formatTokens(totalTokens(ALL_MODELS)));
   await expect(page.getByTestId('spend-hero')).toContainText('3 in 2 projects');
-  await expect(page.getByTestId('status-bar')).toContainText('● live');
+  await expect(page.getByRole('status')).toHaveText('live');
   await page.screenshot({ path: `${SCREENS}/hero.png`, fullPage: true });
   expect(problems).toEqual([]);
 });
@@ -337,7 +337,7 @@ test('names its headings and controls, and closes the project picker when focus 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('claude-code-monitor');
   // SpendHero, TokenTypes, ModelsTable, ProjectsTable and SessionsTable captions.
   await expect(page.getByRole('heading', { level: 2 })).toHaveCount(5);
-  await expect(page.getByRole('status')).toHaveText('● live');
+  await expect(page.getByRole('status')).toHaveText('live');
   await expect(page.getByRole('button', { name: '$ (dollars)' })).toHaveAttribute('aria-pressed', 'true');
 
   const toggle = page.getByRole('button', { name: 'projects: all (2)' });
@@ -436,4 +436,129 @@ test('shows no client switch or rate limits without Codex data or the tap file',
   await expect(page.getByTestId('status-bar')).not.toContainText('codex');
   await expect(page.getByTestId('status-bar')).not.toContainText('⚠');
   await expect(page.getByTestId('spend-hero')).not.toContainText('clients');
+});
+
+test('draws no ASCII bars or brackets and no glow', async ({ page }) => {
+  await page.goto(RANGE);
+  await expect(page.getByTestId('spend-hero')).toBeVisible();
+  // The project picker lists its projects only while open.
+  await page.getByRole('button', { name: /all \(2\)/ }).click();
+  const text = await page.locator('body').innerText();
+  for (const glyph of ['[x]', '[ ]', '\u2593', '\u2591', '\u2588', '\u258c', '\u258f']) expect(text).not.toContain(glyph);
+  // Strings, as in support.ts: the specs typecheck without DOM types.
+  expect(await page.evaluate("[...document.querySelectorAll('*')].some((el) => getComputedStyle(el).textShadow !== 'none')")).toBe(false);
+  await expect(page.locator('body')).toHaveCSS('background-image', 'none');
+});
+
+test('rolls the hero digits, keeps the value readable, and stands still with reduced motion', async ({ page }) => {
+  // The suite runs with reduced motion (playwright.config.ts); this test needs the motion.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(`${RANGE}&unit=tok`);
+  const hero = page.getByTestId('hero-main');
+  await expect(hero).toHaveText(formatTokens(totalTokens(ALL_MODELS)));
+  const strip = page.getByTestId('spend-hero').locator('.strip').first();
+  await expect(strip).toHaveCSS('transition-duration', '0.7s');
+  // A unit switch changes the shape of the string: the text copy still holds exactly the new value.
+  await page.getByRole('button', { name: '$ (dollars)' }).click();
+  await expect(hero).toHaveText(/^\$\d+\.\d{2}$/);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  await expect(page.getByTestId('spend-hero').locator('.strip').first()).toHaveCSS('transition-duration', '0s');
+});
+
+test('steps to the neighbouring period with the arrows', async ({ page }) => {
+  const problems = trackConsole(page);
+  const from = page.getByLabel('from', { exact: true });
+  const to = page.getByLabel('to', { exact: true });
+
+  // today -> yesterday -> today again, as the preset.
+  await page.goto('/?range=today');
+  await page.getByRole('button', { name: 'previous day' }).click();
+  await expect(page).toHaveURL(/from=2026-03-14&to=2026-03-14/);
+  await expect(from).toHaveValue('2026-03-14');
+  await page.getByRole('button', { name: 'next day' }).click();
+  await expect(page).toHaveURL(/range=today/);
+  await expect(page.getByRole('button', { name: 'today', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+  // 7d (03-09 to 03-15) back to 03-02 to 03-08, which starts on the first day of history, so back is disabled there.
+  await page.goto('/?range=7d&unit=tok');
+  const next = page.getByRole('button', { name: 'next 7 days' });
+  await expect(next).toHaveAttribute('aria-disabled', 'true');
+  await expect(next).toHaveAccessibleDescription('already at today');
+  await page.getByRole('button', { name: 'previous 7 days' }).click();
+  await expect(from).toHaveValue('2026-03-02');
+  await expect(to).toHaveValue('2026-03-08');
+  // 03-02 to 03-08 holds all opus usage and the subagent sonnet usage of 03-05; the beta sonnet (03-10) and haiku (03-12) are later.
+  await expect(page.getByTestId('hero-main')).toHaveText(formatTokens(totalTokens(ALL_MODELS) - BETA_TOKENS - totalTokens([HAIKU])));
+  const previous = page.getByRole('button', { name: 'previous 7 days' });
+  await expect(previous).toHaveAttribute('aria-disabled', 'true');
+  await expect(previous).toHaveAccessibleDescription('history starts 03-02');
+  await expect(previous).toHaveCSS('color', 'rgb(95, 92, 82)');
+
+  // Back in the browser returns to the preset; forward from the custom week lands on the 7d preset again.
+  await page.goBack();
+  await expect(page).toHaveURL(/range=7d/);
+  await page.goForward();
+  await expect(from).toHaveValue('2026-03-02');
+  await page.getByRole('button', { name: 'next 7 days' }).click();
+  await expect(page).toHaveURL(/\?range=7d&unit=tok$/);
+  await expect(page.getByRole('button', { name: '7d', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+  // "all" has no neighbour.
+  await page.getByRole('button', { name: 'all', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^previous / })).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByRole('button', { name: /^next / })).toHaveAttribute('aria-disabled', 'true');
+  expect(problems).toEqual([]);
+});
+
+test('sets Cyrillic titles in IBM Plex Mono from the bundle', async ({ page, baseURL }) => {
+  const outside: string[] = [];
+  page.on('request', (request) => {
+    if (baseURL !== undefined && !request.url().startsWith(baseURL) && !request.url().startsWith('data:')) outside.push(request.url());
+  });
+  await page.goto(RANGE);
+  const title = page.getByTestId('sessions-table').locator('.title-text', { hasText: '\u0422\u0435\u0441\u0442\u044b' });
+  await expect(title).toBeVisible();
+  await expect(title).toHaveCSS('font-family', /^"?IBM Plex Mono"?/);
+  // A string, as in support.ts: the specs typecheck without DOM types. Browsers may print U+0400 without the zero.
+  const cyrillicFaces = await page.evaluate(
+    "document.fonts.load('400 12px \"IBM Plex Mono\"', '\\u0422\\u0435\\u0441\\u0442').then((faces) => faces.filter((face) => /U\\+0*400\\b/i.test(face.unicodeRange)).length)",
+  );
+  expect(cyrillicFaces).toBeGreaterThan(0);
+  expect(outside).toEqual([]);
+});
+
+test('keeps the last checked model looking checked while it cannot be unchecked', async ({ page }) => {
+  await page.goto(`${RANGE}&models=${OPUS}`);
+  const last = page.getByRole('checkbox', { name: /opus-5/ });
+  await expect(last).toBeDisabled();
+  await expect(last).toHaveAttribute('aria-checked', 'true');
+  // --fg, like any checked model; not the --dimmer of disabled controls.
+  await expect(last).toHaveCSS('color', 'rgb(216, 212, 199)');
+});
+
+test('copies the hero number as its value, not the digit strips', async ({ page }) => {
+  await page.goto(RANGE);
+  const hero = page.getByTestId('hero-main');
+  await expect(hero).toHaveText(/^\$\d+\.\d{2}$/);
+  // A string, as in support.ts: the specs typecheck without DOM types.
+  const selected = await page.evaluate(
+    "(() => { const box = document.querySelector('[data-testid=spend-hero] .readout'); const range = document.createRange(); range.selectNodeContents(box); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); return selection.toString().trim(); })()",
+  );
+  expect(selected).toBe(await hero.textContent());
+});
+
+test('lists only the models used in the period, and keeps a checked one visible', async ({ page }) => {
+  const models = page.getByRole('group', { name: 'models' });
+  await page.goto(RANGE);
+  await expect(models.getByRole('checkbox')).toHaveCount(3);
+  // 03-12 has only the haiku session.
+  await page.goto(`/?from=2026-03-12&to=2026-03-12`);
+  await expect(models.getByRole('checkbox')).toHaveCount(1);
+  await expect(models.getByRole('checkbox', { name: /haiku-4\.5/ })).toBeVisible();
+  // A model checked in the URL stays listed even without usage in the period.
+  await page.goto(`/?from=2026-03-12&to=2026-03-12&models=${OPUS}`);
+  await expect(models.getByRole('checkbox')).toHaveCount(2);
+  await expect(models.getByRole('checkbox', { name: /opus-5/ })).toHaveAttribute('aria-checked', 'true');
 });

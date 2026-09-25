@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyStateKind, pendingIndicator, progressBar, statusView, visibleSources } from '../../../src/web/lib/status-view.js';
+import { emptyStateKind, pendingIndicator, progressShare, statusView, visibleSources } from '../../../src/web/lib/status-view.js';
 import { makeOverview, makeStatus } from './fixtures.js';
 
 const live = makeStatus({
@@ -28,7 +28,7 @@ describe('statusView', () => {
       prices: 'prices: litellm · 09-11 06:00',
       tz: 'tz Europe/Kyiv',
       sync: 'sync 14:02:11',
-      indicator: { kind: 'live', text: '● live', progress: null },
+      indicator: { kind: 'live', text: 'live', progress: null },
       warnings: [],
     });
   });
@@ -38,7 +38,7 @@ describe('statusView', () => {
     expect(statusView({ ...live, backfill }, false).indicator).toEqual({
       kind: 'backfill',
       text: 'backfill',
-      progress: { files: '312/754', bar: '▓▓░░░' },
+      progress: { files: '312/754', share: 312 / 754 },
     });
   });
 
@@ -65,7 +65,7 @@ describe('statusView', () => {
   });
 
   it('marks the API offline', () => {
-    expect(statusView(live, true).indicator).toEqual({ kind: 'offline', text: '○ offline', progress: null });
+    expect(statusView(live, true).indicator).toEqual({ kind: 'offline', text: 'offline', progress: null });
   });
 
   it('warns about skipped lines, dropped iterations and advisor usage mismatches', () => {
@@ -94,15 +94,17 @@ describe('statusView', () => {
 describe('pendingIndicator', () => {
   it('says connecting before the first status, and offline once a poll has failed', () => {
     expect(pendingIndicator(false)).toEqual({ kind: 'connecting', text: 'connecting…', progress: null });
-    expect(pendingIndicator(true)).toEqual({ kind: 'offline', text: '○ offline', progress: null });
+    expect(pendingIndicator(true)).toEqual({ kind: 'offline', text: 'offline', progress: null });
   });
 });
 
-describe('progressBar', () => {
-  it('fills cells in proportion', () => {
-    expect(progressBar(0, 0)).toBe('░░░░░');
-    expect(progressBar(5, 5)).toBe('▓▓▓▓▓');
-    expect(progressBar(1, 4, 8)).toBe('▓▓░░░░░░');
+describe('progressShare', () => {
+  it('is done over total, clamped to 0-1, and 0 without a total', () => {
+    expect(progressShare(0, 0)).toBe(0);
+    expect(progressShare(5, 5)).toBe(1);
+    expect(progressShare(1, 4)).toBe(0.25);
+    expect(progressShare(9, 4)).toBe(1);
+    expect(progressShare(-1, 4)).toBe(0);
   });
 });
 

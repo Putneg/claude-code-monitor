@@ -3,7 +3,7 @@ import { addDays, daysInclusive } from '../../time.js';
 import type { Db } from '../connection.js';
 import type { UsageFilter } from './filter-sql.js';
 import { querySeries, type SeriesOptions } from './series.js';
-import { queryByClient, queryByModel, queryByProject, queryPeriodCost, queryTotals } from './totals.js';
+import { queryByClient, queryByModel, queryByProject, queryModelsInRange, queryPeriodCost, queryTotals } from './totals.js';
 
 export interface OverviewOptions extends SeriesOptions {
   /** First day with any usage in the database (unfiltered), or null when empty. */
@@ -45,5 +45,6 @@ export function queryOverview(db: Db, filter: UsageFilter, options: OverviewOpti
     byModel: queryByModel(db, filter, core.cost.total),
     byProject: queryByProject(db, filter),
     byClient: queryByClient(db, filter, core.cost.total),
+    modelsInRange: queryModelsInRange(db, filter),
   };
 }

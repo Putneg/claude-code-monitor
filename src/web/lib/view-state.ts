@@ -1,4 +1,4 @@
-import type { Bucket, Client, Day, SessionSort, Stack } from '../../shared/api.js';
+import type { Bucket, Client, Day, ModelOption, SessionSort, Stack } from '../../shared/api.js';
 import { daysInclusive, isValidDay } from '../../shared/days.js';
 import { MAX_LIST_ITEM_LENGTH, MAX_LIST_ITEMS, MAX_QUERY_DAY, MAX_RANGE_DAYS, MIN_QUERY_DAY } from '../../shared/limits.js';
 import { CLIENTS, isClient } from '../../shared/models.js';
@@ -134,6 +134,19 @@ export function withCustomRange(view: ViewState, from: Day, to: Day): ViewState 
   return { ...view, range: null, from: start, to: end, bucket: null };
 }
 
+/** The presets a range of this many days that ends today turns back into. */
+const PRESET_BY_DAYS: Readonly<Record<number, RangePreset>> = { 1: 'today', 7: '7d', 30: '30d', 90: '90d' };
+
+/**
+ * The view after a step to the neighbouring period. Unlike withPreset and withCustomRange it keeps the bucket: the
+ * length does not change, so a valid bucket stays valid. A range that ends today with a preset's length becomes that
+ * preset again, so it follows the date from then on.
+ */
+export function withShiftedRange(view: ViewState, next: { readonly from: Day; readonly to: Day }, today: Day): ViewState {
+  const preset = next.to === today ? PRESET_BY_DAYS[daysInclusive(next.from, next.to)] : undefined;
+  return preset === undefined ? { ...view, range: null, from: next.from, to: next.to } : { ...view, range: preset, from: null, to: null };
+}
+
 export function withSettings(view: ViewState, patch: Partial<ViewSettings>): ViewState {
   return { ...view, ...patch };
 }
@@ -149,6 +162,16 @@ export function toggleModel(selected: readonly string[], all: readonly string[],
   const next = current.includes(id) ? current.filter((item) => item !== id) : all.filter((item) => item === id || current.includes(item));
   if (next.length === 0) return selected;
   return next.length === all.length ? [] : next;
+}
+
+/**
+ * The models the filter bar lists: those with usage in the period, plus any model the view has checked explicitly, so
+ * a selection never hides itself. Order, labels and colors come from `all`; before the first overview (`inRange` null)
+ * every model is listed.
+ */
+export function visibleModels(all: readonly ModelOption[], inRange: readonly string[] | null, selected: readonly string[]): ModelOption[] {
+  if (inRange === null) return [...all];
+  return all.filter((model) => inRange.includes(model.id) || selected.includes(model.id));
 }
 
 /** Toggles a project in the filter; an empty list means all projects. */

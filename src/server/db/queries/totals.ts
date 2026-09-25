@@ -138,6 +138,13 @@ export function queryByProject(db: Db, filter: UsageFilter): ProjectBreakdown[] 
   }));
 }
 
+/** Ids of the models with usage in the period, sorted; the model, project and client filters are ignored on purpose. */
+export function queryModelsInRange(db: Db, filter: UsageFilter): string[] {
+  const where = buildWhere({ from: filter.from, to: filter.to, models: [], projects: [], clients: [] });
+  const rows = db.prepare(`SELECT DISTINCT model FROM usage WHERE ${where.sql} ORDER BY model`).all(where.params) as { model: string }[];
+  return rows.map((row) => row.model);
+}
+
 export function queryByClient(db: Db, filter: UsageFilter, totalCost: number): ClientBreakdown[] {
   const where = buildWhere(filter);
   const rows = db
