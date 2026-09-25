@@ -33,7 +33,7 @@ export interface ApiClient {
 const REQUIRED_KEYS = {
   status: ['today', 'tz', 'sync', 'backfill', 'sources', 'pricing', 'data', 'codexLimits', 'claudeLimits'],
   filters: ['models', 'projects', 'clients', 'bounds'],
-  overview: ['range', 'totals', 'series', 'byModel', 'byProject', 'byClient'],
+  overview: ['range', 'totals', 'series', 'byModel', 'byProject', 'byClient', 'modelsInRange'],
   sessions: ['total', 'sessions'],
 } as const;
 

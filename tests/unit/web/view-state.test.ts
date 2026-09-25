@@ -250,9 +250,17 @@ describe('visibleModels', () => {
     ]);
   });
 
-  it('keeps an explicitly checked model visible even without usage in the period', () => {
+  it('shows checked models without usage only when no used model is checked, so a selection never hides itself', () => {
     expect(visibleModels(all, ['claude-sonnet-5'], ['claude-haiku-4-5']).map((model) => model.id)).toEqual([
       'claude-haiku-4-5',
+      'claude-sonnet-5',
+    ]);
+  });
+
+  it('hides checked models without usage once a used model is checked', () => {
+    const selected = ['claude-fable-5', 'claude-haiku-4-5', 'claude-opus-5'];
+    expect(visibleModels(all, ['claude-opus-5', 'claude-sonnet-5'], selected).map((model) => model.id)).toEqual([
+      'claude-opus-5',
       'claude-sonnet-5',
     ]);
   });

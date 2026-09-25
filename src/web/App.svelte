@@ -182,6 +182,7 @@
         today={status.today}
         firstDay={filters.bounds.firstDay}
         models={shownModels}
+        allModelIds={filters.models.map((model) => model.id)}
         projects={filters.projects}
         clients={filters.clients}
         onPreset={setPreset}

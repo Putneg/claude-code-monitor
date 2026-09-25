@@ -165,12 +165,14 @@ export function toggleModel(selected: readonly string[], all: readonly string[],
 }
 
 /**
- * The models the filter bar lists: those with usage in the period, plus any model the view has checked explicitly, so
- * a selection never hides itself. Order, labels and colors come from `all`; before the first overview (`inRange` null)
- * every model is listed.
+ * The models the filter bar lists: those with usage in the period. Checked models without usage join them only when no
+ * used model is checked, so a selection never hides itself (the page would otherwise be empty with nothing checked).
+ * Order, labels and colors come from `all`; before the first overview (`inRange` null) every model is listed.
  */
 export function visibleModels(all: readonly ModelOption[], inRange: readonly string[] | null, selected: readonly string[]): ModelOption[] {
   if (inRange === null) return [...all];
+  const used = all.filter((model) => inRange.includes(model.id));
+  if (selected.length === 0 || used.some((model) => selected.includes(model.id))) return used;
   return all.filter((model) => inRange.includes(model.id) || selected.includes(model.id));
 }
 

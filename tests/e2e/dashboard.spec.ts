@@ -562,3 +562,17 @@ test('lists only the models used in the period, and keeps a checked one visible'
   await expect(models.getByRole('checkbox')).toHaveCount(2);
   await expect(models.getByRole('checkbox', { name: /opus-5/ })).toHaveAttribute('aria-checked', 'true');
 });
+
+test('an unchecked model is excluded in every period, other models stay checked', async ({ page }) => {
+  const models = page.getByRole('group', { name: 'models' });
+  // 03-02 to 03-05 has opus and the subagent sonnet, no haiku.
+  await page.goto('/?from=2026-03-02&to=2026-03-05');
+  await expect(models.getByRole('checkbox')).toHaveCount(2);
+  await models.getByRole('checkbox', { name: /sonnet-5/ }).click();
+  // The opus checkbox is the last checked one in this period, so it cannot be unchecked.
+  await expect(models.getByRole('checkbox', { name: /opus-5/ })).toBeDisabled();
+  // A wider period brings haiku back, still checked: only sonnet was excluded.
+  await page.getByRole('button', { name: 'all', exact: true }).click();
+  await expect(models.getByRole('checkbox', { name: /haiku-4\.5/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(models.getByRole('checkbox', { name: /sonnet-5/ })).toHaveAttribute('aria-checked', 'false');
+});

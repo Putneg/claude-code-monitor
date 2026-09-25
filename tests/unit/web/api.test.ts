@@ -133,6 +133,8 @@ describe('createApiClient', () => {
     });
     const overview = { range: {}, totals: {}, series: {}, byModel: [], byProject: [] };
     await expect(createApiClient(async () => json(overview)).overview('x=1')).rejects.toMatchObject({ code: 'bad_response' });
+    const withoutModelsInRange = { ...overview, byClient: [] };
+    await expect(createApiClient(async () => json(withoutModelsInRange)).overview('x=1')).rejects.toMatchObject({ code: 'bad_response' });
     const withoutClaude = Object.fromEntries(Object.entries(STATUS_BODY).filter(([key]) => key !== 'claudeLimits'));
     await expect(createApiClient(async () => json(withoutClaude)).status()).rejects.toMatchObject({ code: 'bad_response' });
   });

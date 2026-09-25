@@ -11,7 +11,10 @@
     range: DayRange;
     today: Day;
     firstDay: Day | null;
+    /** The models listed: those used in the period (visibleModels). */
     models: readonly ModelOption[];
+    /** Every known model id: a toggle excludes or includes one model in every period, not only in this one. */
+    allModelIds: readonly string[];
     projects: readonly ProjectOption[];
     clients: readonly ClientOption[];
     onPreset: (preset: RangePreset) => void;
@@ -20,7 +23,8 @@
     onShift: (direction: ShiftDirection) => void;
   }
 
-  let { view, range, today, firstDay, models, projects, clients, onPreset, onCustomRange, onSettings, onShift }: Props = $props();
+  let { view, range, today, firstDay, models, allModelIds, projects, clients, onPreset, onCustomRange, onSettings, onShift }: Props =
+    $props();
   const choice = $derived(clientChoice(view.clients));
 
   const uid = $props.id();
@@ -33,7 +37,6 @@
     if (allowed) onShift(direction);
   }
 
-  const modelIds = $derived(models.map((model) => model.id));
   const checkedCount = $derived(models.filter((model) => isChecked(view.models, model.id)).length);
 
   type Edge = 'from' | 'to';
@@ -223,7 +226,7 @@
         aria-checked={checked}
         disabled={checked && checkedCount === 1}
         title={model.priced ? model.id : `${model.id} (no price: counted as $0)`}
-        onclick={() => onSettings({ models: toggleModel(view.models, modelIds, model.id) })}
+        onclick={() => onSettings({ models: toggleModel(view.models, allModelIds, model.id) })}
       >
         <span class="sq" class:off={!checked} style:--sq={model.color} aria-hidden="true"></span>
         {model.label}
